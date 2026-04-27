@@ -1,7 +1,7 @@
 {
-  "name": "facerix-template",
-  "version": "1.0.0",
-  "description": "Template for Facerix Progressive Web Apps",
+  "name": "muggins",
+  "version": "0.1.0",
+  "description": "Online Muggins card game — offline-first PWA",
   "main": "index.html",
   "scripts": {
     "start": "live-server --no-browser",

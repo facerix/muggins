@@ -4,7 +4,7 @@
   /* Chrome-only for now but this will allow smooth size transitions */
   interpolate-size: allow-keywords;
 
-  --accent-color: #2ec6fe;
+  --accent-color: #f0f7f3;
 }
 
 html {
@@ -22,8 +22,8 @@ body {
   flex-direction: column;
   padding: 0;
   margin: 0;
-  background-color: #f0f0f0;
-  color: #303030;
+  background-color: #163d24;
+  color: #f0f7f3;
 
   font-family: Futura, 'Trebuchet MS', Arial, sans-serif;
   font-style: normal;
@@ -100,7 +100,7 @@ main {
 
   padding: 8px;
   overflow-y: auto;
-  background-color: #fafafa;
+  background-color: #1a6b3c;
 }
 
 .btn,
@@ -134,7 +134,7 @@ input[type='file']::file-selector-button {
   &:not(:disabled):hover,
   &:not(:disabled):focus-visible {
     outline: var(--accent-color) auto 1px;
-    background-color: #ddbfc67a;
+    background-color: rgba(240, 247, 243, 0.15);
   }
 }
 
@@ -152,7 +152,7 @@ input[type='file'] {
     outline: var(--accent-color) auto 1px;
 
     &::file-selector-button {
-      background-color: #ddbfc67a;
+      background-color: rgba(240, 247, 243, 0.15);
     }
   }
 }

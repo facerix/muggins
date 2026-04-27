@@ -1,6 +1,8 @@
-# Facerix App Template
+# Muggins
 
-Progressive Web App (PWA) template for building offline-first web applications. Built with vanilla JavaScript, Web Components, and Service Workers.
+An offline-first Progressive Web App (PWA) implementation of the Muggins card game. Built with vanilla JavaScript, Web Components, and Service Workers.
+
+See [docs/how-to-play.md](docs/how-to-play.md) for the rules.
 
 ## Architecture
 
@@ -55,15 +57,9 @@ Separate `sw.js` (production) and `sw-dev.js` (development) files. Automatically
 
 ## Getting Started
 
-1. Clone this template
-2. Update `package.json` with your app name
-3. Update `manifest.json` with your app details
-4. Update `index.html` title and meta tags
-5. Add your icons to `/icons/` directory
-6. Run `npm install`
-7. Run `npm start` to start development server
-8. Build your app!
+1. `npm install`
+2. `npm start` — live-server at http://localhost:8080
 
 ## Credits
 
-Template created by [Rylee Corradini](https://www.facerix.com/about).
+Built by [Rylee Corradini](https://www.facerix.com/about) on the Facerix PWA template.

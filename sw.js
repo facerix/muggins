@@ -1,4 +1,4 @@
-// Service Worker for App - Production Version
+// Service Worker for Muggins - Production Version
 // Import shared caching core with cache-busting query parameter
 const VERSION = '1.0.0';
 importScripts(`/sw-core.js?v=${VERSION}`);
@@ -7,7 +7,7 @@ const cacheConfig = CacheConfig.create(VERSION);
 const CACHE_VERSION = cacheConfig.version;
 const CACHE_NAMES = cacheConfig;
 const CACHE_PREFIX = cacheConfig.prefix;
-const LOG_PREFIX = `[App ${CACHE_VERSION}]`;
+const LOG_PREFIX = `[Muggins ${CACHE_VERSION}]`;
 
 const coreResources = CacheConfig.getCoreResources();
 const staticAssets = CacheConfig.getStaticAssets();
