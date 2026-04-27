@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["oxc", "unicorn"],
+  "categories": {
+    "correctness": "error"
+  },
+  "env": {
+    "browser": true,
+    "es2024": true,
+    "serviceworker": true
+  },
+  "rules": {
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_",
+        "ignoreRestSiblings": true
+      }
+    ],
+    "no-empty": ["warn", { "allowEmptyCatch": true }],
+    "prefer-const": "warn",
+    "no-var": "warn",
+    "no-redeclare": "warn",
+    "no-unreachable": "warn",
+    "no-constant-condition": "warn",
+    "no-undef": "warn"
+  },
+  "ignorePatterns": [
+    "node_modules/**",
+    "dist/**",
+    "build/**",
+    "*.min.js",
+    "package-lock.json",
+    ".prettierrc.js",
+    "sw.js",
+    "sw-dev.js",
+    "sw-core.js"
+  ]
+}

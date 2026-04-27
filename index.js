@@ -1,9 +1,7 @@
 import { serviceWorkerManager } from '/src/ServiceWorkerManager.js';
 import '/components/UpdateNotification.js';
 
-const whenLoaded = Promise.all([customElements.whenDefined('update-notification')]);
-
-whenLoaded.then(async () => {
+customElements.whenDefined('update-notification').then(async () => {
   const updateNotification = document.querySelector('update-notification');
 
   window.addEventListener('sw-update-available', event => {

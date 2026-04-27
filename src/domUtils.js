@@ -66,7 +66,7 @@ export const CreateSvg = (body, width, height, classNames = '') => {
   svg.setAttribute('width', width);
   svg.setAttribute('height', height);
   svg.setAttribute('viewBox', '0 0 24 24');
-  classNames && svg.setAttribute('class', classNames);
+  if (classNames) svg.setAttribute('class', classNames);
   svg.innerHTML = body;
   return svg;
 };

@@ -1,7 +1,11 @@
 import { serviceWorkerManager } from './src/ServiceWorkerManager.js';
 import '/components/UpdateNotification.js';
+import '/components/ConfirmationModal.js';
 
-const whenLoaded = Promise.all([customElements.whenDefined('update-notification')]);
+const whenLoaded = Promise.all([
+  customElements.whenDefined('update-notification'),
+  customElements.whenDefined('confirmation-modal'),
+]);
 
 whenLoaded.then(async () => {
   const updateNotification = document.querySelector('update-notification');
@@ -52,11 +56,10 @@ whenLoaded.then(async () => {
 
   const btnClearCache = document.getElementById('btnClearCache');
   const clearCacheStatus = document.getElementById('clearCacheStatus');
+  const confirmModal = document.querySelector('confirmation-modal');
 
-  btnClearCache.addEventListener('click', async () => {
-    if (!window.confirm('This will clear all cached data and reload the page. Continue?')) {
-      return;
-    }
+  confirmModal.addEventListener('confirm', async event => {
+    if (event.detail.context !== 'clear-cache') return;
 
     btnClearCache.disabled = true;
     clearCacheStatus.innerText = 'Clearing caches...';
@@ -68,5 +71,12 @@ whenLoaded.then(async () => {
       clearCacheStatus.innerText = 'Failed to clear caches';
       btnClearCache.disabled = false;
     }
+  });
+
+  btnClearCache.addEventListener('click', () => {
+    confirmModal.showModal(
+      'This will clear all cached data and reload the page. Continue?',
+      'clear-cache',
+    );
   });
 });
