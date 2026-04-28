@@ -111,23 +111,20 @@ Targeted regression coverage on existing pure code, keeping zero-dep posture:
 - Skip: `DataStore.js` (defer to Phase 3 — modified there anyway), `ServiceWorkerManager.js` (browser-only, no good Node test path), DOM helpers in `domUtils.js` (`h`, `CreateSvg`, `htmlToMarkdown`, `isDevelopmentMode`).
 - **Verify:** `npm test` green; coverage extends across two test directories, validating auto-discovery handles nesting.
 
-### Phase 1 — Engine core (TDD)
-Tests written first for each module:
-- `card.js`: rank order, suit constants, `isAdjacent(a, b)` (one higher or lower, no wrap).
-- `rng.js`: same seed → same sequence; sequence advances state.
-- `deck.js`: `buildDeck()` returns 52 unique cards; `shuffle(deck, rng)` is deterministic per seed.
-- `gameState.js::createGame({ seed, players })`:
-  - 4 cards to display piles (face-up).
-  - Remaining 48 dealt evenly across 2–4 players (handles uneven remainders by giving spares to first players).
-- `legalMoves.js::legalPlaysFor(state, card)`: returns list of `{ pileType, pileId }` targets across all display piles + every other player's face-up pile top.
-- `reducer.js`:
-  - `START` → produces initial state.
-  - `FLIP` → moves top of `faceDown` to `flippedCard`.
-  - `PLAY { target }` → places `flippedCard` onto target if legal, else throws.
-  - `HOLD` → places `flippedCard` onto own face-up pile.
-  - `FLIP_HELD` → when `faceDown` empty, flip face-up pile back to face-down.
-  - Turn advances correctly; winner detected when both piles empty.
-- **Verify:** Run `npm test`; all engine tests pass. No browser code yet.
+### Phase 1 — Engine core (TDD) — ✅ Complete (2026-04-28)
+- ✅ `src/engine/card.js`: `SUITS`, `RANKS`, `ACE`/`KING` constants, `makeCard`, `isAdjacent`, `cardId`. (11 tests)
+- ✅ `src/engine/rng.js`: Mulberry32 PRNG via `makeRng(seed)` with `.next()`, `.range(max)`, `.state`. State carried in game state for replay determinism. (8 tests)
+- ✅ `src/engine/deck.js`: `buildDeck()` (52 unique), `shuffle(cards, rng)` (Fisher-Yates, pure). (8 tests)
+- ✅ `src/engine/gameState.js`: `createGame({ seed, players })`. 2/3/4 players supported; 4 display piles; 48 cards dealt round-robin. Throws on invalid player counts. Initial state shape matches the plan sketch. (16 tests)
+- ✅ `src/engine/legalMoves.js`: `legalPlaysFor(state, card)` returns `{ type: 'display', pileIndex }` and `{ type: 'opponent', playerId }` targets. Excludes current player's own face-up pile. (10 tests)
+- ✅ `src/engine/actions.js`: action creators (`start`, `flip`, `flipHeld`, `play`, `hold`) producing the SSE+POST-ready envelope `{ type, payload, by, at? }`.
+- ✅ `src/engine/reducer.js`: pure `(state, action) → newState`. Stamps `at` index on dispatch, appends to `state.log`. Validates preconditions and throws on illegal moves. Winner detection on PLAY (HOLD cannot win). Turn rotates after PLAY/HOLD; FLIP_HELD does not rotate. Replay test confirms `log.reduce(reducer, undefined)` reproduces the final state. (21 tests)
+- **Result:** 74 new engine tests + 20 backfill = **94 total, all green.** Format clean, lint clean.
+
+**Architecture notes captured during build:**
+- Engine modules use **relative imports** (`./card.js`) so they run unchanged in Node's test runner and the browser. UI/glue layer keeps `/src/...` web-root paths.
+- Player IDs are deterministic `p0`..`p3` (not UUIDs) so replay from action log is fully reproducible. Display names come from caller-supplied input.
+- When a player wins, `turn.playerId` stays on the winner and `turn.phase` becomes `'done'` (rather than rotating to next). This makes the winner's seat the natural place to anchor a "you won!" highlight in the UI.
 
 ### Phase 2 — AI personas (TDD)
 - `ai/persona.js`: documented shape `{ chooseAction(state, playerId, rng), shouldCallMuggins(state, playerId) }`.
