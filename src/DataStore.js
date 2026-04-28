@@ -111,6 +111,25 @@ class DataStore extends EventTarget {
     }
   }
 
+  /**
+   * Insert or replace a row by explicit id (used for singleton slots like active game).
+   * @param {string} id
+   * @param {object} record fields merged with `id`
+   */
+  upsertItemById(id, record) {
+    const merged = { ...record, id };
+    const index = this.#items.findIndex(rec => rec.id === id);
+    if (index > -1) {
+      this.#items[index] = merged;
+      this.#reindex();
+      this.#emitChangeEvent('update', merged);
+    } else {
+      this.#items.unshift(merged);
+      this.#reindex();
+      this.#emitChangeEvent('add', merged);
+    }
+  }
+
   deleteItem(id) {
     if (this.#itemsById.has(id)) {
       this.#items = this.#items.filter(r => r.id !== id);

@@ -137,15 +137,14 @@ Each phase ends in a state where the app is committable, lints, tests pass, and 
 - ✅ Tests: personas + muggins opportunity + replay; **integration:** `tests/engine/ai/fullGame.test.js` — seed `4242` four-AI roster, replay equality; separate determinism twin-run test (`seed 4243`).
 - **Verify:** **104 tests** (`npm test` green); `npm run format` / `npm run lint` green. `sw-core.js`: no new shipped UI entrypoints yet (`runFullGame` imported from engine once runtime exists).
 
-### Phase 3 — Persistence + runtime glue
-- `src/game/persistence.js`:
-  - Reserve id `'active-game'` for the current game record. Add a small extension to `DataStore` to allow setting/replacing a record by a *given* id (today `addItem` overwrites with a new uuid). Keep API minimal: `setActiveGame(state)`, `getActiveGame()`, `clearActiveGame()`.
-  - Snapshot includes the full action log (state.log).
-- `src/game/runtime.js`:
-  - `dispatch(action)`: validate → reduce → persist → emit change event.
-  - `tickAI()`: if active player is AI, schedule `chooseAction` after a configurable delay (default ~1000 ms — gives humans time to call Muggins on AI mistakes).
-  - Auto-resume: on app load, if `getActiveGame()` returns a state, render the game view; else render setup.
-- **Verify:** Manually exercise via dev console: create state, persist, reload page, confirm state survives. Round-trip unit test in `tests/`.
+### Phase 3 — Persistence + runtime glue — ✅ Complete (2026-04-28)
+- ✅ `DataStore.upsertItemById(id, record)` for singleton slots (does not change `addItem` uuid behavior).
+- ✅ `src/game/persistence.js`: `setActiveGame(state)`, `getActiveGame()`, `clearActiveGame()`; snapshot is full engine state including `log`.
+- ✅ `src/game/runtime.js`: `dispatch` → reducer + strategist `CALL_MUGGINS` resolution (stub reducer) → `setActiveGame` → DataStore `change`; `tickAI` / `configureAiDelay` (default 1000 ms); `hydrateRuntime` / `resetRuntime` / `abandonGame`.
+- ✅ `index.js`: `await DataStore.init()` (loads `localStorage`), boot stub — resume via `getActiveGame` + `hydrateRuntime` vs empty setup message.
+- ✅ Tests: `tests/game/persistence.test.js`; Node resolves `/src/…` imports via `tests/node-webroot-imports.mjs` + `package.json` `test` script.
+- ✅ `sw-core.js::getCoreResources()` extended for engine + glue + `UpdateNotification` used by `index.js`.
+- **Verify:** Manually: start a game from the console (`dispatch(start({…}))`), reload, confirm resume message reflects saved turn. `npm test` green (106 tests).
 
 ### Phase 4 — Card UI primitives
 - `src/views/cardSvg.js::cardFace({ rank, suit })`: returns an SVG element via existing `CreateSvg`. Layout: corner rank + suit glyph, large center suit, mirrored corner. Suit colors via CSS custom properties on `:root` (theme-friendly).
@@ -197,7 +196,7 @@ Each item independently shippable:
 | File | Change |
 |------|--------|
 | `package.json` | Add `test` script |
-| `src/DataStore.js` | Add minimal `setActiveGame` / `getActiveGame` / `clearActiveGame` API (or fix `addItem` to honor a provided id) |
+| `src/DataStore.js` | `upsertItemById` for reserved ids; active-game helpers live in `src/game/persistence.js` |
 | `index.js` | Boot logic: resume vs setup |
 | `index.html` | Possibly add a `<game-board>` mount point or keep `<main>` |
 | `main.css` | Add board grid + card styles; respect existing theme tokens |
