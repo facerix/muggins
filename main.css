@@ -6,7 +6,22 @@
 
   --accent-color: #f0f7f3;
   --highlight-color: #c9a227;
+
+  /* Playing cards — consumed by svg.card-face / svg.card-back (theme-friendly) */
+  --card-suit-red: #c62828;
+  --card-suit-black: #1a1a1a;
+  --card-face-bg: #faf9f6;
+  --card-border: rgba(26, 26, 26, 0.35);
+  --card-font: Futura, 'Trebuchet MS', Arial, sans-serif;
+  --card-back-fill: #0d2818;
+  --card-back-border: #1a6b3c;
+  --card-back-accent: var(--highlight-color);
+  --card-empty-border: rgba(240, 247, 243, 0.45);
+  --card-empty-bg: rgba(0, 0, 0, 0.12);
+  --card-empty-label: rgba(240, 247, 243, 0.65);
 }
+
+/* Programmatic card SVG paint lives in PROGRAMMATIC_CARD_SVG_CSS (cardSvg.js), injected in <card-pile> shadow. Re-import that string if you mount cardFace/cardBack in light DOM only. */
 
 html {
   box-sizing: border-box;
@@ -203,6 +218,10 @@ a:focus-visible {
 
 .u-center {
   text-align: center;
+}
+
+.u-muted {
+  color: rgba(240, 247, 243, 0.72);
 }
 
 .u-fill-width {

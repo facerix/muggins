@@ -146,12 +146,15 @@ Each phase ends in a state where the app is committable, lints, tests pass, and 
 - ✅ `sw-core.js::getCoreResources()` extended for engine + glue + `UpdateNotification` used by `index.js`.
 - **Verify:** Manually: start a game from the console (`dispatch(start({…}))`), reload, confirm resume message reflects saved turn. `npm test` green (106 tests).
 
-### Phase 4 — Card UI primitives
-- `src/views/cardSvg.js::cardFace({ rank, suit })`: returns an SVG element via existing `CreateSvg`. Layout: corner rank + suit glyph, large center suit, mirrored corner. Suit colors via CSS custom properties on `:root` (theme-friendly).
-- `src/views/cardSvg.js::cardBack()`: programmatic back (or use existing `/images/cards-stack.svg`).
-- New web component `<card-pile>` in `components/`: renders a stack with the top card visible (face-up or face-down).
-- Static fixture page `views-test.html` (dev-only, not registered in service worker) that renders a known game state for visual verification across breakpoints.
-- **Verify:** Open fixture page on phone-width and desktop-width; confirm rendering, no layout breaks.
+### Phase 4 — Card UI primitives — ✅ Complete (2026-04-28)
+- ✅ `src/views/cardSvg.js::cardFace({ rank, suit })`: SVG via `CreateSvg` (24×24 viewBox); corners + center pip; mirrored corner; `rankLabel()` exported. Suit colors from `:root` tokens (`--card-suit-red` / `--card-suit-black`, etc.).
+- ✅ `src/views/cardSvg.js::cardBack()`: programmatic back (no `/images/cards-stack.svg` in repo).
+- ✅ `components/CardPile.js` → `<card-pile>`: attrs `face` (`up`|`down`), `rank`, `suit`, `count`; ghost stack up to 3 cards behind top; empty state when `count="0"`.
+- ✅ `views-test.html` + `card-ui-fixture.js` (companion script deliberately **not** named `*test*.js` so Node’s test runner ignores it). Dev-only; **not** in `sw-core.js`.
+- ✅ `main.css`: card tokens + global rules for `svg.card-face` / `svg.card-back` (inherit into shadow roots). `.u-muted` utility; `.views-test__*` layout for the fixture.
+- ✅ `sw-core.js`: `/src/views/cardSvg.js`, `/components/CardPile.js`.
+- ✅ `tests/unit/cardSvg.test.js`: `rankLabel` coverage.
+- **Verify:** Open `http://localhost:8090/views-test.html` at phone- and desktop-width; cards and grid stay coherent.
 
 ### Phase 5 — Setup screen
 - Render at `<main>` when no active game exists.
@@ -216,7 +219,7 @@ Each item independently shippable:
 
 1. **False-Muggins penalty** (blocks Phase 7). Rules in `docs/how-to-play.md` are silent. Recommend no penalty (call simply fails). Confirm before Phase 7.
 2. **AI think delay default** (Phase 3 / Phase 6). Recommend 1000 ms default with a dev-mode override; revisit after playtesting.
-3. **Card-back asset**: programmatic SVG vs. existing `/images/cards-stack.svg` — settle in Phase 4.
+3. **Card-back asset**: **Programmatic SVG** in `cardBack()` (no stack asset in repo). Themed via `--card-back-*` on `:root`.
 4. **Whether `addItem` should honor a provided id** vs. adding a separate singleton API — design choice in Phase 3 (lean toward a separate API to avoid changing existing semantics).
 
 ## Verification strategy

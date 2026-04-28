@@ -45,6 +45,8 @@ const CacheConfig = {
       '/src/engine/ai/random.js',
       '/src/engine/ai/greedy.js',
       '/src/engine/ai/strategist.js',
+      '/src/views/cardSvg.js',
+      '/components/CardPile.js',
       '/components/ConfirmationModal.js',
       '/components/UpdateNotification.js',
     ];

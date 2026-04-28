@@ -61,11 +61,11 @@ export const pluralize = (quantity, thing) => {
 	`;
 };
 
-export const CreateSvg = (body, width, height, classNames = '') => {
+export const CreateSvg = (body, width, height, classNames = '', viewBox = '0 0 24 24') => {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', width);
   svg.setAttribute('height', height);
-  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('viewBox', viewBox);
   if (classNames) svg.setAttribute('class', classNames);
   svg.innerHTML = body;
   return svg;

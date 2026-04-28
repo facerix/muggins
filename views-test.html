@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Muggins — card UI fixture (dev)</title>
+    <link rel="stylesheet" href="/main.css" type="text/css" />
+    <!-- Dev-only: not registered in the service worker. Companion script is card-ui-fixture.js (not *test*.js — avoids Node's test discovery). -->
+    <style>
+      /* dev fixture: views-test.html */
+      .views-test__intro {
+        text-align: left;
+        max-width: 48rem;
+        margin: 0 auto 1rem;
+      }
+
+      .views-test__section {
+        margin-bottom: 2rem;
+      }
+
+      .views-test__title {
+        font-size: 1.1rem;
+        margin: 0 0 0.75rem;
+        text-align: left;
+      }
+
+      .views-test__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+        gap: 1rem 0.75rem;
+        align-items: end;
+        justify-items: center;
+      }
+
+      .views-test__cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+        max-width: 6rem;
+      }
+
+      .views-test__label {
+        font-size: 0.7rem;
+        color: rgba(240, 247, 243, 0.85);
+        text-align: center;
+        word-break: break-word;
+      }
+    </style>
+  </head>
+  <body class="u-fill-height">
+    <header id="main-head">
+      <a class="header-identity" href="/"><h1>Card UI fixture</h1></a>
+    </header>
+    <main>
+      <p class="u-muted views-test__intro">
+        Phase 4 visual verification. Resize the viewport (phone vs desktop). This page is not cached
+        offline.
+      </p>
+      <div id="fixture-root"></div>
+    </main>
+    <footer id="main-foot"><a href="/">← Muggins</a></footer>
+    <script type="module" src="/card-ui-fixture.js"></script>
+  </body>
+</html>
