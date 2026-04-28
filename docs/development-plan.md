@@ -140,7 +140,7 @@ Each phase ends in a state where the app is committable, lints, tests pass, and 
 ### Phase 3 — Persistence + runtime glue — ✅ Complete (2026-04-28)
 - ✅ `DataStore.upsertItemById(id, record)` for singleton slots (does not change `addItem` uuid behavior).
 - ✅ `src/game/persistence.js`: `setActiveGame(state)`, `getActiveGame()`, `clearActiveGame()`; snapshot is full engine state including `log`.
-- ✅ `src/game/runtime.js`: `dispatch` → reducer + strategist `CALL_MUGGINS` resolution (stub reducer) → `setActiveGame` → DataStore `change`; `tickAI` / `configureAiDelay` (default 1000 ms); `hydrateRuntime` / `resetRuntime` / `abandonGame`.
+- ✅ `src/game/runtime.js`: `dispatch` → reducer + strategist `CALL_MUGGINS` resolution (stub reducer) → `setActiveGame` → DataStore `change`; `tickAI` / AI timing (`configureAiDelay`, optional jitter via `configureAiJitterEnabled` + `configureAiJitterHalfMs`); `hydrateRuntime` / `resetRuntime` / `abandonGame`.
 - ✅ `index.js`: `await DataStore.init()` (loads `localStorage`), boot stub — resume via `getActiveGame` + `hydrateRuntime` vs empty setup message.
 - ✅ Tests: `tests/game/persistence.test.js`; Node resolves `/src/…` imports via `tests/node-webroot-imports.mjs` + `package.json` `test` script.
 - ✅ `sw-core.js::getCoreResources()` extended for engine + glue + `UpdateNotification` used by `index.js`.
@@ -157,31 +157,30 @@ Each phase ends in a state where the app is committable, lints, tests pass, and 
 - **Verify:** Open `http://localhost:8090/views-test.html` at phone- and desktop-width; cards and grid stay coherent.
 
 ### Phase 5 — Setup screen — ✅ Complete (2026-04-28)
-- ✅ `src/views/setup.js`: `<main>` mounts `mountSetupView` (no in-memory state) or `mountPendingGameView` (hydrated / post-`START`).
+- ✅ `src/views/setup.js`: `mountSetupView` for the pre-game form (no in-memory form state).
 - ✅ Form: player count 2–4; each row: name + kind (`Human`, `Random AI`, `Greedy AI`, `Strategist AI`). `randomSeed()` uses `crypto.getRandomValues`.
-- ✅ "Start game" → `dispatch(start({ seed, players }))` (reducer + persistence + AI schedule); view refresh.
-- ✅ Reload: `getActiveGame()` hydrates runtime → placeholder (Phase 6 swaps in board). "Change setup" → `resetRuntime()` → setup with **Resume game** (persisted snapshot, no Abandon) plus roster prefill from storage.
+- ✅ "Start game" → `dispatch(start({ seed, players }))` (reducer + persistence + AI schedule); `index.js` refreshes via DataStore `change` + active-game row (Phase 6).
+- ✅ Reload: `getActiveGame()` hydrates runtime → **Phase 6** game board (`mountGameView`). "Change setup" → `resetRuntime()` → setup with **Resume game** (persisted snapshot, no Abandon) plus roster prefill from storage.
 - ✅ "Resume game" when a snapshot exists but runtime was cleared for setup (above path); full auto-hydrate path does not need it.
 - ✅ "Abandon game" → `abandonGame()` → setup (no saved slot).
 - ✅ `sw-core.js` lists `/src/views/setup.js`.
 - **Verify:** Manually create games of 2/3/4 players with various human-AI mixes; confirm persistence; confirm reload resumes; try Change setup → Resume.
 
-### Phase 6 — Game view + turn loop
-- Render board: 4 display piles in the center; player areas around them (CSS grid; `auto-fit` for 2–4).
-- Active human turn UI:
-  - Big "Flip" button → `dispatch(FLIP)`.
-  - After flip, show the card; render highlight on every legal target pile; tap a pile to play, or "Hold" button.
-- AI turns: runtime drives them after configured delay; show a small "AI is thinking…" indicator.
-- Auto-resume on reload via existing persistence wiring.
-- **Verify:** Play complete games hot-seat + AI, 2- and 4-player, on phone and desktop. Confirm no illegal-move UI is reachable.
+### Phase 6 — Game view + turn loop — ✅ Complete (2026-04-28)
+- ✅ `src/views/game.js`: `mountGameView` — four center display piles (2×2 grid); player areas `repeat(auto-fit, minmax(...))` for 2–4 seats with `<card-pile>` deck + held stacks; winner banner when `state.winner` (Phase 8 may swap to dedicated `postGame.js`). Footer: Change setup / Abandon.
+- ✅ Active human turn: **Flip** / **Flip held pile** → `dispatch(flip|flipHeld)`; **decide** shows flipped card + **Hold** + outlined legal targets; tap center pile or opponent held pile → `dispatch(play)` after `legalPlaysFor` re-check (no illegal targets surfaced).
+- ✅ AI: `tickAI` after delay; production boots **~1000 ms ±300 ms** jitter (uniform), dev uses fixed delay from slider (`localStorage` key `muggins-dev-ai-delay-ms`, default 0 ms) with jitter off; **AI is thinking…** via `isAiScheduled()` + polling.
+- ✅ `index.js`: mounts game when `getState()` set; subscribes to **DataStore** `change` for `active-game` upserts/deletes so `<main>` re-renders after each `dispatch` (start/abandon covered without extra `refreshMain` calls where persistence fires).
+- ✅ `main.css`: `.game-board*` responsive grid + legal-highlight outlines; `sw-core.js::getCoreResources()` lists `/src/views/game.js`.
+- **Verify:** Play complete games hot-seat + AI, 2- and 4-player, phone + desktop. Confirm no illegal-move UI is reachable.
 
 ### Phase 7 — Muggins button
-- Replace the **existing `CALL_MUGGINS` stub** in `reducer.js` with real validation and card movement; finalize `callMuggins` payload (offender, etc.) in `actions.js`.
-- Decide false-call penalty (open question — see below). Recommend: **no penalty for a wrong call** to keep UX low-stakes; simply ignore. Confirm before implementing.
-- "Muggins!" affordance visible to every *human* seat, callable any time another player has just held.
-- On press: engine validates whether the most recent `HOLD` action had a legal play available at the moment it was dispatched (using the action log + state replay or a stored `legalAtFlip` field on the action). If yes → each other player gives the offender one card from their face-down pile.
+- Replace the **existing `CALL_MUGGINS` stub** in `reducer.js` with real validation and card movement; finalize `callMuggins` payload (offender / caller / bad-call flag, etc.) in `actions.js`.
+- **False-call penalty (decided):** if the call is invalid, **each other player gives the false caller one card** from their own stack (same card-flow pattern as a valid Muggins, roles reversed — see `docs/how-to-play.md` § Bad calls). False caller adds those cards and **play resumes** from that state.
+- "Muggins!" affordance visible to every *human* seat, callable any time another player has just held (per rules timing — validate in engine).
+- On press (valid call): engine validates whether the most recent `HOLD` action had a legal play available at the moment it was dispatched (action log + replay or stored `legalAtFlip`). If yes → each other player gives the **offender** one card from their face-down pile (existing rule text).
 - Strategist persona issues `CALL_MUGGINS` via runtime when it spots a miss; gated by the same engine validator.
-- **Verify:** Engine unit tests for valid + invalid Muggins detection; manual playtest with a Random AI seat (susceptible to Muggins) and a Strategist (will call).
+- **Verify:** Engine unit tests for valid + invalid Muggins detection + false-call penalty routing; manual playtest with a Random AI seat (susceptible to Muggins) and a Strategist (will call).
 
 ### Phase 8 — Win screen + new game
 - When `state.winner` is set, runtime swaps to `views/postGame.js`: winner name, simple stats (turns played, Muggins calls), "Play again with same seats" / "Back to setup" buttons.
@@ -192,7 +191,7 @@ Each phase ends in a state where the app is committable, lints, tests pass, and 
 Each item independently shippable:
 - Dealing/playing animations via View Transitions API (already enabled in `main.css`).
 - Mobile-friendly layout refinements after real-device playtesting.
-- AI think indicator with persona-specific speed.
+- AI think indicator refinements (persona-specific speed — prod already uses randomized delay around the base).
 - Sound effect hooks (no assets bundled by default).
 - Accessibility pass: focus order, ARIA labels on cards/piles, keyboard play.
 
@@ -202,9 +201,9 @@ Each item independently shippable:
 |------|--------|
 | `package.json` | Add `test` script |
 | `src/DataStore.js` | `upsertItemById` for reserved ids; active-game helpers live in `src/game/persistence.js` |
-| `index.js` | Boot logic: resume vs setup |
-| `index.html` | Possibly add a `<game-board>` mount point or keep `<main>` |
-| `main.css` | Add board grid + card styles; respect existing theme tokens |
+| `index.js` | Boot logic: resume vs setup vs board; DataStore listener refreshes game UI |
+| `index.html` | `<main>` mount (Phase 6 game board — no separate wrapper needed) |
+| `main.css` | Board grid + card styles (Phase 4 tokens + Phase 6 `.game-board`) |
 | `sw-core.js::getCoreResources()` | Register every new JS/HTML/CSS file as it ships |
 | `AGENTS.md` | Document engine vs UI import-path rule once Phase 1 lands |
 
@@ -219,10 +218,9 @@ Each item independently shippable:
 
 ## Open questions to resolve before the affected phase
 
-1. **False-Muggins penalty** (blocks Phase 7). Rules in `docs/how-to-play.md` are silent. Recommend no penalty (call simply fails). Confirm before Phase 7.
-2. **AI think delay default** (Phase 3 / Phase 6). Recommend 1000 ms default with a dev-mode override; revisit after playtesting.
-3. **Card-back asset**: **Programmatic SVG** in `cardBack()` (no stack asset in repo). Themed via `--card-back-*` on `:root`.
-4. **Whether `addItem` should honor a provided id** vs. adding a separate singleton API — design choice in Phase 3 (lean toward a separate API to avoid changing existing semantics).
+No blocking items for Phase 7 **Muggins penalties** or **AI delay**: rules are in `docs/how-to-play.md` (including bad calls); timing is in `src/game/runtime.js` (production jitter + dev-mode slider persisted under `muggins-dev-ai-delay-ms`).
+
+Card faces/backs remain programmatic SVG via Phase 4 (`cardSvg.js`, `:root` tokens).
 
 ## Verification strategy
 

@@ -1,16 +1,38 @@
 import DataStore from '/src/DataStore.js';
 import { start } from '/src/engine/actions.js';
-import { getActiveGame } from '/src/game/persistence.js';
+import { getActiveGame, ACTIVE_GAME_ID } from '/src/game/persistence.js';
 import {
   abandonGame,
+  configureAiDelay,
+  configureAiJitterEnabled,
+  configureAiJitterHalfMs,
+  DEV_AI_DELAY_MS_STORAGE_KEY,
   dispatch,
   getState,
   hydrateRuntime,
   resetRuntime,
 } from '/src/game/runtime.js';
-import { mountPendingGameView, mountSetupView } from '/src/views/setup.js';
+import { isDevelopmentMode } from '/src/domUtils.js';
+import { mountGameView } from '/src/views/game.js';
+import { mountSetupView } from '/src/views/setup.js';
 import { serviceWorkerManager } from '/src/ServiceWorkerManager.js';
 import '/components/UpdateNotification.js';
+
+function bootAiTiming() {
+  if (isDevelopmentMode()) {
+    const raw = globalThis.localStorage?.getItem(DEV_AI_DELAY_MS_STORAGE_KEY);
+    const parsed = raw != null ? Number.parseInt(raw, 10) : 0;
+    const ms = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+    configureAiDelay(ms);
+    configureAiJitterEnabled(false);
+  } else {
+    configureAiDelay(1000);
+    configureAiJitterHalfMs(300);
+    configureAiJitterEnabled(true);
+  }
+}
+
+bootAiTiming();
 
 /**
  * Hydrate reducer runtime from persisted slot when Storage has a snapshot but RAM does not (reload).
@@ -25,7 +47,7 @@ function syncHydrateFromStorage(skip) {
 }
 
 /**
- * Decide between setup form and Phase 6 placeholder depending on reducer memory.
+ * Setup vs game board depending on in-memory runtime (`getState()`).
  */
 function refreshMain(options = {}) {
   const skipHydrate = Boolean(options.skipHydrateFromStorage);
@@ -53,31 +75,37 @@ function refreshMain(options = {}) {
         : undefined,
       onSubmit: ({ seed, players }) => {
         dispatch(start({ seed, players }));
-        refreshMain({ skipHydrateFromStorage: true });
       },
     });
     return;
   }
 
-  const winnerName = state.winner
-    ? (state.players.find(p => p.id === state.winner)?.name ?? state.winner)
-    : null;
-  const summaryLine = state.winner ? `Game over — winner: ${winnerName}` : 'Game in progress';
-  const detailLine =
-    state.winner == null ? `Turn: ${state.turn.playerId} · ${state.turn.phase}` : null;
-
-  mountPendingGameView(main, {
-    summaryLine,
-    detailLine,
+  mountGameView(main, {
+    getState,
+    dispatch,
     onAbandon: () => {
       abandonGame();
-      refreshMain({ skipHydrateFromStorage: true });
     },
     onChangeSetup: () => {
       resetRuntime();
       refreshMain({ skipHydrateFromStorage: true });
     },
   });
+}
+
+/** @param {CustomEvent} evt */
+function activeGameStorageChanged(evt) {
+  const { changeType, affectedRecords } = evt.detail;
+  if (changeType === 'init') return false;
+  if (changeType === 'delete') {
+    const ids = Array.isArray(affectedRecords) ? affectedRecords : [];
+    return ids.includes(ACTIVE_GAME_ID);
+  }
+  if (changeType === 'add' || changeType === 'update') {
+    const rec = affectedRecords;
+    return Boolean(rec && typeof rec === 'object' && rec.id === ACTIVE_GAME_ID);
+  }
+  return false;
 }
 
 customElements.whenDefined('update-notification').then(async () => {
@@ -89,6 +117,12 @@ customElements.whenDefined('update-notification').then(async () => {
   });
 
   await DataStore.init();
+
+  DataStore.addEventListener('change', evt => {
+    if (!activeGameStorageChanged(evt)) return;
+    refreshMain({ skipHydrateFromStorage: true });
+  });
+
   refreshMain();
 
   await serviceWorkerManager.register();

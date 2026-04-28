@@ -37,6 +37,10 @@ If a player fails to play a card when a legal move was available, any other play
 
 As punishment, **each other player gives the offending player one card** from their own stack. The penalized player adds those cards to their stack and resumes play.
 
+### Bad calls
+
+If someone calls **Muggins!** and there was **no** missed legal play, it is a bad call. **Each other player gives the false caller one card** from their own stack (same transfer pattern as a valid Muggins, but the **false caller** receives the cards). The false caller adds those cards to their stack and **play continues** from there.
+
 ## Winning
 
 The first player to have **no cards remaining** — neither face-down nor face-up — wins.

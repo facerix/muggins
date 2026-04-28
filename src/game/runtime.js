@@ -5,10 +5,17 @@ import { reducer } from '/src/engine/reducer.js';
 import { makeRng } from '/src/engine/rng.js';
 import * as persistence from '/src/game/persistence.js';
 
+/** `localStorage` key for dev-mode AI delay slider (integer ms). */
+export const DEV_AI_DELAY_MS_STORAGE_KEY = 'muggins-dev-ai-delay-ms';
+
 let currentState = null;
 let aiTimer = null;
-/** Default ~1s so humans can react (Muggins); override with {@link configureAiDelay}. */
+/** Base AI think delay (ms). Override with {@link configureAiDelay}. */
 let aiDelayMs = 1000;
+/** When jitter is on and base delay is positive, delay adds uniform ±this around the base (production feel). */
+let aiJitterHalfMs = 300;
+/** Production: random delay in [base − half, base + half]; dev/tests: usually off for fixed control. */
+let aiJitterEnabled = true;
 
 const resolveStrategistMuggins = state => {
   for (const p of state.players) {
@@ -31,6 +38,9 @@ const clearAiTimer = () => {
   }
 };
 
+/** True while an AI move is scheduled after {@link configureAiDelay} (for UI: “thinking…” indicator). */
+export const isAiScheduled = () => aiTimer != null;
+
 const scheduleAiIfNeeded = () => {
   clearAiTimer();
   const state = currentState;
@@ -42,17 +52,34 @@ const scheduleAiIfNeeded = () => {
   const persona = personaForKind(row.kind);
   if (!persona) return;
 
+  let delayMs = aiDelayMs;
+  if (aiDelayMs > 0 && aiJitterEnabled && aiJitterHalfMs > 0) {
+    const spread = aiRngForState(state).range(aiJitterHalfMs * 2 + 1);
+    delayMs = aiDelayMs - aiJitterHalfMs + spread;
+    delayMs = Math.max(0, delayMs);
+  }
+
   aiTimer = setTimeout(() => {
     aiTimer = null;
     tickAI();
-  }, aiDelayMs);
+  }, delayMs);
 };
 
 export const getState = () => currentState;
 
-/** @param {number} ms think delay between AI actions (0 in dev by default). */
+/** @param {number} ms base think delay between AI actions (0 = immediate). */
 export function configureAiDelay(ms) {
   aiDelayMs = ms;
+}
+
+/** @param {boolean} enabled when true (prod default), AI delay varies randomly ± {@link configureAiJitterHalfMs}. */
+export function configureAiJitterEnabled(enabled) {
+  aiJitterEnabled = Boolean(enabled);
+}
+
+/** @param {number} ms half-width of uniform jitter around base delay (default 300 → [base−300, base+300]). */
+export function configureAiJitterHalfMs(ms) {
+  aiJitterHalfMs = Math.max(0, Number(ms) || 0);
 }
 
 /**

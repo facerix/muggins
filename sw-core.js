@@ -46,6 +46,7 @@ const CacheConfig = {
       '/src/engine/ai/greedy.js',
       '/src/engine/ai/strategist.js',
       '/src/views/cardSvg.js',
+      '/src/views/game.js',
       '/src/views/setup.js',
       '/components/CardPile.js',
       '/components/ConfirmationModal.js',
