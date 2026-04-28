@@ -126,13 +126,16 @@ Each phase ends in a state where the app is committable, lints, tests pass, and 
 - Player IDs are deterministic `p0`..`p3` (not UUIDs) so replay from action log is fully reproducible. Display names come from caller-supplied input.
 - When a player wins, `turn.playerId` stays on the winner and `turn.phase` becomes `'done'` (rather than rotating to next). This makes the winner's seat the natural place to anchor a "you won!" highlight in the UI.
 
-### Phase 2 — AI personas (TDD)
-- `ai/persona.js`: documented shape `{ chooseAction(state, playerId, rng), shouldCallMuggins(state, playerId) }`.
-- `ai/random.js`: 50% chance to play if legal, else hold; never calls Muggins.
-- `ai/greedy.js`: always plays a legal card if one exists; never calls Muggins.
-- `ai/strategist.js`: prefers plays onto opponents' face-up piles; calls Muggins when legal play was missed by another player.
-- Integration test: run a full game with 4 AI personas, deterministic seed, assert it terminates with a single winner and a reproducible log.
-- **Verify:** `npm test` green; deterministic full-game replay test included.
+### Phase 2 — AI personas (TDD) — ✅ Complete (2026-04-28)
+- ✅ `src/engine/ai/persona.js`: `{ chooseAction(state, playerId, rng), shouldCallMuggins(state, playerId) }` + `personaForKind(kind)`.
+- ✅ `src/engine/ai/random.js`: if legal moves exist — 50% play (uniform random target) / 50% hold; flip vs flipHeld deterministic; never calls Muggins.
+- ✅ `src/engine/ai/greedy.js`: first legal target from `legalPlaysFor`; never calls Muggins.
+- ✅ `src/engine/ai/strategist.js`: opponent piles before center display piles when choosing among legals; `shouldCallMuggins` when log tail is a HOLD that skipped legal plays (**Phase 7** enforcer for `CALL_MUGGINS` payload / penalties — stub reducer unchanged).
+- ✅ `src/engine/mugginsOpportunity.js`: `missedLegalOffenderIfLastHold(state)` replays log prefix to detect offender (shared with strategist + future Phase 7).
+- ✅ `src/engine/replay.js`: `replayFromLog` helper for deterministic audit.
+- ✅ `src/engine/ai/runFullGame.js`: automated match driver — strategist `CALL_MUGGINS` after each HOLD before active AI acts; terminates with winner or errors on loops.
+- ✅ Tests: personas + muggins opportunity + replay; **integration:** `tests/engine/ai/fullGame.test.js` — seed `4242` four-AI roster, replay equality; separate determinism twin-run test (`seed 4243`).
+- **Verify:** **104 tests** (`npm test` green); `npm run format` / `npm run lint` green. `sw-core.js`: no new shipped UI entrypoints yet (`runFullGame` imported from engine once runtime exists).
 
 ### Phase 3 — Persistence + runtime glue
 - `src/game/persistence.js`:
