@@ -502,6 +502,19 @@ a:focus-visible {
   outline-offset: 4px;
 }
 
+/* Active player's own held pile when its top has a legal play (PLAY_HELD source). */
+.game-board__held--source {
+  padding: 0.3rem;
+  border-radius: 0.55rem;
+  outline: 2px dashed var(--highlight-color);
+  outline-offset: 2px;
+}
+
+.game-board__hint {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
 .game-board__mini-label {
   font-size: 0.62rem;
   letter-spacing: 0.04em;

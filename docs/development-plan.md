@@ -174,13 +174,26 @@ Each phase ends in a state where the app is committable, lints, tests pass, and 
 - ✅ `main.css`: `.game-board*` responsive grid + legal-highlight outlines; `sw-core.js::getCoreResources()` lists `/src/views/game.js`.
 - **Verify:** Play complete games hot-seat + AI, 2- and 4-player, phone + desktop. Confirm no illegal-move UI is reachable.
 
+### Phase 6.5 — Held-top play option (post-Phase 6 fix)
+- The original turn loop only allowed `FLIP` (or `FLIP_HELD`) at the start of the turn. Per the rules, the player may **also** play the top of their face-up (held) pile if a legal target exists; flipping when the held-top has a legal target is grounds for Muggins.
+- ✅ `actions.js`: new `playHeld(playerId, target)` → `PLAY_HELD` envelope.
+- ✅ `reducer.js`: `PLAY_HELD` requires flip phase + non-empty `faceUp`; consumes face-up top; checkWinner; advances turn (no FLIP, no decide phase). HOLD remains decide-phase only — flip phase only allows `PLAY_HELD | FLIP | FLIP_HELD`.
+- ✅ `mugginsOpportunity.js`: added `missedLegalOffenderIfLastFlip` (FLIP / FLIP_HELD with held-top playable, recovered without replay since FLIP leaves `faceUp` unchanged and FLIP_HELD reverses `faceUp` into `faceDown`); combined export `missedLegalOffender` covers both sources.
+- ✅ AI personas: Greedy/Strategist play held-top whenever a legal target exists; Random 50/50 PLAY_HELD vs FLIP when held-top has legals. Strategist's `shouldCallMuggins` now uses `missedLegalOffender` so it catches missed flips.
+- ✅ Runtime: strategist Muggins resolver runs after every action via `missedLegalOffender` (was: only after HOLD).
+- ✅ Game view: in flip phase, when active human's held-top has legal targets, the same target-click affordance used in decide phase highlights legal display + opponent piles; a hint reminds the user that flipping carries Muggins risk; the active player's own held pile is dashed-outlined to mark the source. `Flip` / `Flip held pile` buttons remain available so the player can deliberately accept the risk.
+- ✅ Docs: `how-to-play.md` updated to make the held-top option (and corresponding Muggins trigger) explicit.
+
 ### Phase 7 — Muggins button
 - Replace the **existing `CALL_MUGGINS` stub** in `reducer.js` with real validation and card movement; finalize `callMuggins` payload (offender / caller / bad-call flag, etc.) in `actions.js`.
 - **False-call penalty (decided):** if the call is invalid, **each other player gives the false caller one card** from their own stack (same card-flow pattern as a valid Muggins, roles reversed — see `docs/how-to-play.md` § Bad calls). False caller adds those cards and **play resumes** from that state.
-- "Muggins!" affordance visible to every *human* seat, callable any time another player has just held (per rules timing — validate in engine).
-- On press (valid call): engine validates whether the most recent `HOLD` action had a legal play available at the moment it was dispatched (action log + replay or stored `legalAtFlip`). If yes → each other player gives the **offender** one card from their face-down pile (existing rule text).
+- "Muggins!" affordance visible to every *human* seat, callable any time another player has just held **or flipped past a legal held-top play** (per Phase 6.5 rule clarification — engine validates).
+- On press (valid call): engine validates the call against the most recent log entry. Two sources count:
+  - `HOLD` after a flip whose flipped card had a legal target (existing).
+  - `FLIP` / `FLIP_HELD` whose actor had a legal play available with their held-top (added in Phase 6.5).
+  Use `missedLegalOffender` from `mugginsOpportunity.js`. If a missed play is found → each other player gives the **offender** one card from their face-down pile.
 - Strategist persona issues `CALL_MUGGINS` via runtime when it spots a miss; gated by the same engine validator.
-- **Verify:** Engine unit tests for valid + invalid Muggins detection + false-call penalty routing; manual playtest with a Random AI seat (susceptible to Muggins) and a Strategist (will call).
+- **Verify:** Engine unit tests for valid + invalid Muggins detection across both sources + false-call penalty routing; manual playtest with a Random AI seat (susceptible to Muggins) and a Strategist (will call).
 
 ### Phase 8 — Win screen + new game
 - When `state.winner` is set, runtime swaps to `views/postGame.js`: winner name, simple stats (turns played, Muggins calls), "Play again with same seats" / "Back to setup" buttons.

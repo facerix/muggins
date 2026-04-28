@@ -26,6 +26,12 @@ export const play = (playerId, target) => ({
   by: playerId,
 });
 
+export const playHeld = (playerId, target) => ({
+  type: 'PLAY_HELD',
+  payload: { target },
+  by: playerId,
+});
+
 export const hold = playerId => ({
   type: 'HOLD',
   payload: {},

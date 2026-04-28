@@ -1,15 +1,24 @@
-import { flip, flipHeld, hold, play } from '../actions.js';
+import { flip, flipHeld, hold, play, playHeld } from '../actions.js';
 import { legalPlaysFor } from '../legalMoves.js';
 
 /**
- * Flip / flipHeld deterministically when required; after flip — 50% play vs hold if any legal play exists,
- * picking a uniformly random legal target when playing.
+ * Flip phase: 50% PLAY_HELD (uniform random target) vs flip when held-top has any legal play;
+ * else flip / flipHeld deterministically.
+ * Decide phase: 50% PLAY (uniform target) vs HOLD when legal plays exist for the flipped card; else HOLD.
  */
 export const chooseAction = (state, playerId, rng) => {
   const hand = state.hands.find(h => h.playerId === playerId);
   if (!hand) throw new Error(`random AI: unknown player ${playerId}`);
 
   if (state.turn.phase === 'flip') {
+    if (hand.faceUp.length > 0) {
+      const top = hand.faceUp[hand.faceUp.length - 1];
+      const heldLegals = legalPlaysFor(state, top);
+      if (heldLegals.length > 0 && rng.next() < 0.5) {
+        const i = rng.range(heldLegals.length);
+        return playHeld(playerId, heldLegals[i]);
+      }
+    }
     if (hand.faceDown.length > 0) return flip(playerId);
     return flipHeld(playerId);
   }

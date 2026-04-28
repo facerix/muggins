@@ -3,7 +3,15 @@ import assert from 'node:assert/strict';
 
 import { makeCard } from '../../src/engine/card.js';
 import { reducer } from '../../src/engine/reducer.js';
-import { start, flip, flipHeld, play, hold, callMuggins } from '../../src/engine/actions.js';
+import {
+  start,
+  flip,
+  flipHeld,
+  play,
+  playHeld,
+  hold,
+  callMuggins,
+} from '../../src/engine/actions.js';
 
 const players2 = [
   { name: 'A', kind: 'human' },
@@ -184,6 +192,110 @@ test("PLAY that empties a player's hands sets winner and phase=done", () => {
   const s2 = reducer(s1, play('p0', { type: 'display', pileIndex: 0 }));
   assert.equal(s2.winner, 'p0');
   assert.equal(s2.turn.phase, 'done');
+});
+
+// ---------- PLAY_HELD ----------
+
+test('PLAY_HELD plays the top of face-up onto a legal display target and advances turn', () => {
+  const state = {
+    ...winnableState(),
+    hands: [
+      {
+        playerId: 'p0',
+        faceDown: [makeCard(9, 'C'), makeCard(2, 'D')],
+        faceUp: [makeCard(8, 'S'), makeCard(5, 'H')], // top is 5H, adjacent to 4C
+      },
+      { playerId: 'p1', faceDown: [makeCard(2, 'C')], faceUp: [] },
+    ],
+  };
+  const s1 = reducer(state, playHeld('p0', { type: 'display', pileIndex: 0 }));
+  assert.deepEqual(s1.displayPiles[0][s1.displayPiles[0].length - 1], makeCard(5, 'H'));
+  assert.deepEqual(s1.hands[0].faceUp, [makeCard(8, 'S')]);
+  assert.equal(s1.flippedCard, null);
+  assert.equal(s1.turn.playerId, 'p1');
+  assert.equal(s1.turn.phase, 'flip');
+  // hand-built state has empty log, so the action lands at index 0.
+  assert.equal(s1.log[0].type, 'PLAY_HELD');
+});
+
+test('PLAY_HELD onto an opponent face-up adds to that opponent', () => {
+  const state = {
+    ...winnableState(),
+    hands: [
+      { playerId: 'p0', faceDown: [makeCard(9, 'C')], faceUp: [makeCard(6, 'D')] },
+      { playerId: 'p1', faceDown: [makeCard(2, 'C')], faceUp: [makeCard(5, 'D')] },
+    ],
+    displayPiles: [
+      [makeCard(13, 'C')],
+      [makeCard(13, 'D')],
+      [makeCard(13, 'H')],
+      [makeCard(13, 'S')],
+    ],
+  };
+  const s1 = reducer(state, playHeld('p0', { type: 'opponent', playerId: 'p1' }));
+  assert.deepEqual(s1.hands[1].faceUp[s1.hands[1].faceUp.length - 1], makeCard(6, 'D'));
+  assert.deepEqual(s1.hands[0].faceUp, []);
+});
+
+test('PLAY_HELD that empties both stacks sets winner', () => {
+  const state = {
+    ...winnableState(),
+    hands: [
+      { playerId: 'p0', faceDown: [], faceUp: [makeCard(5, 'H')] }, // adjacent to 4C
+      { playerId: 'p1', faceDown: [makeCard(2, 'C')], faceUp: [] },
+    ],
+  };
+  const s1 = reducer(state, playHeld('p0', { type: 'display', pileIndex: 0 }));
+  assert.equal(s1.winner, 'p0');
+  assert.equal(s1.turn.phase, 'done');
+});
+
+test('PLAY_HELD throws when not in flip phase', () => {
+  const state = winnableState();
+  const s1 = reducer(state, flip('p0'));
+  // s1 is in decide phase
+  assert.throws(
+    () => reducer(s1, playHeld('p0', { type: 'display', pileIndex: 0 })),
+    /not flip phase/
+  );
+});
+
+test('PLAY_HELD throws when face-up is empty', () => {
+  const state = winnableState();
+  // p0 faceUp is [] in winnableState
+  assert.throws(
+    () => reducer(state, playHeld('p0', { type: 'display', pileIndex: 0 })),
+    /no face-up card/
+  );
+});
+
+test('PLAY_HELD throws on illegal target', () => {
+  const state = {
+    ...winnableState(),
+    hands: [
+      { playerId: 'p0', faceDown: [makeCard(9, 'C')], faceUp: [makeCard(5, 'H')] },
+      { playerId: 'p1', faceDown: [makeCard(2, 'C')], faceUp: [] },
+    ],
+  };
+  // pile 2 top is 11H — 5H not adjacent
+  assert.throws(
+    () => reducer(state, playHeld('p0', { type: 'display', pileIndex: 2 })),
+    /illegal play target/
+  );
+});
+
+test('PLAY_HELD throws if it is not your turn', () => {
+  const state = {
+    ...winnableState(),
+    hands: [
+      { playerId: 'p0', faceDown: [makeCard(9, 'C')], faceUp: [makeCard(5, 'H')] },
+      { playerId: 'p1', faceDown: [makeCard(2, 'C')], faceUp: [] },
+    ],
+  };
+  assert.throws(
+    () => reducer(state, playHeld('p1', { type: 'display', pileIndex: 0 })),
+    /not your turn/
+  );
 });
 
 // ---------- HOLD ----------

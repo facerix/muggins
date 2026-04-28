@@ -106,6 +106,44 @@ const apply = (state, action) => {
       return advanceTurn(next);
     }
 
+    case 'PLAY_HELD': {
+      if (state.turn.playerId !== action.by) throw new Error('not your turn');
+      if (state.turn.phase !== 'flip') throw new Error('not flip phase');
+      const hand = findHand(state, action.by);
+      if (!hand) throw new Error(`unknown player: ${action.by}`);
+      if (hand.faceUp.length === 0) throw new Error('no face-up card to play');
+
+      const top = hand.faceUp[hand.faceUp.length - 1];
+      const { target } = action.payload;
+      const legals = legalPlaysFor(state, top);
+      const isLegal = legals.some(
+        t =>
+          t.type === target?.type &&
+          (t.type === 'display' ? t.pileIndex === target.pileIndex : t.playerId === target.playerId)
+      );
+      if (!isLegal) throw new Error('illegal play target');
+
+      let next = replaceHand(state, action.by, h => ({
+        ...h,
+        faceUp: h.faceUp.slice(0, -1),
+      }));
+      if (target.type === 'display') {
+        next = {
+          ...next,
+          displayPiles: next.displayPiles.map((pile, i) =>
+            i === target.pileIndex ? [...pile, top] : pile
+          ),
+        };
+      } else {
+        next = replaceHand(next, target.playerId, h => ({
+          ...h,
+          faceUp: [...h.faceUp, top],
+        }));
+      }
+      next = { ...next, winner: checkWinner(next) };
+      return advanceTurn(next);
+    }
+
     case 'HOLD': {
       if (state.turn.playerId !== action.by) throw new Error('not your turn');
       if (state.turn.phase !== 'decide') throw new Error('not decide phase');

@@ -1,7 +1,7 @@
 import { callMuggins, start } from '../actions.js';
 import { makeRng } from '../rng.js';
 import { reducer } from '../reducer.js';
-import { missedLegalOffenderIfLastHold } from '../mugginsOpportunity.js';
+import { missedLegalOffender } from '../mugginsOpportunity.js';
 import { personaForKind } from './persona.js';
 
 const MAX_STEPS = 100_000;
@@ -46,7 +46,7 @@ const resolveStrategistMuggins = state => {
   for (const p of state.players) {
     const persona = personaForKind(p.kind);
     if (!persona?.shouldCallMuggins(state, p.id)) continue;
-    const opp = missedLegalOffenderIfLastHold(state);
+    const opp = missedLegalOffender(state);
     if (!opp) continue;
     return reducer(state, callMuggins(p.id, { offenderId: opp.offenderId }));
   }

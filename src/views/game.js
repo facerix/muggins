@@ -1,4 +1,4 @@
-import { flip, flipHeld, hold, play } from '/src/engine/actions.js';
+import { flip, flipHeld, hold, play, playHeld } from '/src/engine/actions.js';
 import { legalPlaysFor } from '/src/engine/legalMoves.js';
 import { personaForKind } from '/src/engine/ai/persona.js';
 import { h, isDevelopmentMode } from '/src/domUtils.js';
@@ -131,10 +131,62 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
   const activePid = state.turn.playerId;
   const activeHuman = !winner && isHumanSeat(state, activePid) && state.turn.phase !== 'done';
 
+  // playCtx: drives the "click a highlighted target" affordance.
+  // - decide phase: target plays the flipped card (PLAY).
+  // - flip phase with a held-top that has legal targets: target plays the held-top (PLAY_HELD).
+  let playCtx = null;
+  if (activeHuman) {
+    if (state.turn.phase === 'decide' && state.flippedCard) {
+      playCtx = {
+        kind: 'flipped',
+        card: state.flippedCard,
+        legals: legalPlaysFor(state, state.flippedCard),
+        dispatchPlay: target => {
+          const cur = getState();
+          if (!cur || cur.winner) return;
+          if (cur.turn.playerId !== activePid || cur.turn.phase !== 'decide') return;
+          if (!cur.flippedCard) return;
+          if (!legalPlaysFor(cur, cur.flippedCard).some(t => targetsEqual(t, target))) return;
+          dispatch(play(activePid, target));
+        },
+      };
+    } else if (state.turn.phase === 'flip') {
+      const hand = state.hands.find(h => h.playerId === activePid);
+      const top = hand?.faceUp?.[hand.faceUp.length - 1];
+      if (top) {
+        const heldLegals = legalPlaysFor(state, top);
+        if (heldLegals.length > 0) {
+          playCtx = {
+            kind: 'held',
+            card: top,
+            legals: heldLegals,
+            dispatchPlay: target => {
+              const cur = getState();
+              if (!cur || cur.winner) return;
+              if (cur.turn.playerId !== activePid || cur.turn.phase !== 'flip') return;
+              const curHand = cur.hands.find(h => h.playerId === activePid);
+              const curTop = curHand?.faceUp?.[curHand.faceUp.length - 1];
+              if (!curTop) return;
+              if (!legalPlaysFor(cur, curTop).some(t => targetsEqual(t, target))) return;
+              dispatch(playHeld(activePid, target));
+            },
+          };
+        }
+      }
+    }
+  }
+
   if (activeHuman) {
     const controls = h('div', { className: 'game-board__controls' }, []);
 
     if (state.turn.phase === 'flip') {
+      if (playCtx?.kind === 'held') {
+        const hint = h('p', { className: 'game-board__hint u-muted' }, []);
+        hint.textContent =
+          'Your held card has a legal play — tap a highlighted pile, or flip anyway (Muggins risk).';
+        controls.appendChild(hint);
+      }
+
       const hand = state.hands.find(h => h.playerId === activePid);
       if (hand && hand.faceDown.length > 0) {
         const flipBtn = h('button', { type: 'button', className: 'game-board__flip btn' }, []);
@@ -191,28 +243,14 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
     }
 
     const target = { type: 'display', pileIndex };
-    const flipped = state.flippedCard;
-    const legals = flipped && state.turn.phase === 'decide' ? legalPlaysFor(state, flipped) : [];
-    const playable =
-      !winner &&
-      state.turn.phase === 'decide' &&
-      flipped &&
-      isHumanSeat(state, state.turn.playerId) &&
-      legals.some(t => targetsEqual(t, target));
+    const playable = !!playCtx && playCtx.legals.some(t => targetsEqual(t, target));
 
     if (playable) {
       wrap.classList.add('game-board__pile-slot--legal');
       wrap.setAttribute('role', 'button');
       wrap.tabIndex = 0;
       wrap.addEventListener('click', () => {
-        const cur = getState();
-        if (!cur || cur.winner || cur.turn.phase !== 'decide') return;
-        if (!isHumanSeat(cur, cur.turn.playerId)) return;
-        const fc = cur.flippedCard;
-        if (!fc) return;
-        const ok = legalPlaysFor(cur, fc).some(t => targetsEqual(t, target));
-        if (!ok) return;
-        dispatch(play(cur.turn.playerId, target));
+        playCtx.dispatchPlay(target);
       });
       wrap.addEventListener('keydown', ev => {
         if (ev.key === 'Enter' || ev.key === ' ') {
@@ -284,29 +322,14 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
     }
 
     const oppTarget = { type: 'opponent', playerId: hid };
-    const flippedCard = state.flippedCard;
-    const legalsOpp =
-      flippedCard && state.turn.phase === 'decide' ? legalPlaysFor(state, flippedCard) : [];
-    const canPlayOpp =
-      !winner &&
-      state.turn.phase === 'decide' &&
-      flippedCard &&
-      isHumanSeat(state, state.turn.playerId) &&
-      legalsOpp.some(t => targetsEqual(t, oppTarget));
+    const canPlayOpp = !!playCtx && playCtx.legals.some(t => targetsEqual(t, oppTarget));
 
     if (canPlayOpp) {
       held.classList.add('game-board__held--legal');
       held.setAttribute('role', 'button');
       held.tabIndex = 0;
       held.addEventListener('click', () => {
-        const cur = getState();
-        if (!cur || cur.winner || cur.turn.phase !== 'decide') return;
-        if (!isHumanSeat(cur, cur.turn.playerId)) return;
-        const fc = cur.flippedCard;
-        if (!fc) return;
-        const ok = legalPlaysFor(cur, fc).some(t => targetsEqual(t, oppTarget));
-        if (!ok) return;
-        dispatch(play(cur.turn.playerId, oppTarget));
+        playCtx.dispatchPlay(oppTarget);
       });
       held.addEventListener('keydown', ev => {
         if (ev.key === 'Enter' || ev.key === ' ') {
@@ -314,6 +337,11 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
           held.click();
         }
       });
+    }
+
+    // Highlight the active player's own held pile when a PLAY_HELD is available.
+    if (playCtx?.kind === 'held' && hid === activePid) {
+      held.classList.add('game-board__held--source');
     }
 
     held.appendChild(heldLabel);

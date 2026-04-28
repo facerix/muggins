@@ -15,12 +15,14 @@ Be the first player to get rid of all of your cards.
 
 Play begins with the player to the left of the dealer.
 
-On your turn, flip over your top face-down card. You have two options:
+At the start of your turn, you have a choice:
 
-- **Play it** — if the card is one higher or one lower than any card currently on display, place it on top of that card.
-- **Hold it** — if the card cannot be played, place it face-up in a separate pile next to your face-down stack.
+- **Play your top held card** — if the top card on your face-up (held) pile is one higher or one lower than the top of any display pile, you may play it there. This is a legal play and skipping it exposes you to **Muggins** (see below).
+- **Flip your top face-down card.** Once flipped, you have two options:
+  - **Play it** — if the card is one higher or one lower than any card currently on display, place it on top of that card.
+  - **Hold it** — if the card cannot be played, place it face-up in a separate pile next to your face-down stack.
 
-> You may also play a card onto **another player's face-up pile** whenever it is one higher or one lower than their top card. This is a strong tactical move — it makes it harder for that player to unload their cards.
+> You may also play a card (held-top or just-flipped) onto **another player's face-up pile** whenever it is one higher or one lower than their top card. This is a strong tactical move — it makes it harder for that player to unload their cards.
 
 ## Card Rules
 
@@ -33,7 +35,7 @@ When your face-down pile is empty, flip your face-up pile over and continue play
 
 ## Muggins — Catching Mistakes
 
-If a player fails to play a card when a legal move was available, any other player may call out **"Muggins!"**
+If a player fails to play a card when a legal move was available — either by **flipping** when their held-top had a legal target, or by **holding** the just-flipped card when it had a legal target — any other player may call out **"Muggins!"**
 
 As punishment, **each other player gives the offending player one card** from their own stack. The penalized player adds those cards to their stack and resumes play.
 

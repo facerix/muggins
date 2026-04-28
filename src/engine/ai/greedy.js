@@ -1,4 +1,4 @@
-import { flip, flipHeld, hold, play } from '../actions.js';
+import { flip, flipHeld, hold, play, playHeld } from '../actions.js';
 import { legalPlaysFor } from '../legalMoves.js';
 
 /** Always plays whenever a legal move exists; otherwise holds. Lowest-index legal target wins. */
@@ -7,6 +7,11 @@ export const chooseAction = (state, playerId, _rng) => {
   if (!hand) throw new Error(`greedy AI: unknown player ${playerId}`);
 
   if (state.turn.phase === 'flip') {
+    if (hand.faceUp.length > 0) {
+      const top = hand.faceUp[hand.faceUp.length - 1];
+      const heldLegals = legalPlaysFor(state, top);
+      if (heldLegals.length > 0) return playHeld(playerId, heldLegals[0]);
+    }
     if (hand.faceDown.length > 0) return flip(playerId);
     return flipHeld(playerId);
   }
