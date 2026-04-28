@@ -104,10 +104,9 @@ Each phase ends in a state where the app is committable, lints, tests pass, and 
 - Pre-existing prettier drift in `about.js` and `src/ServiceWorkerManager.js` was reformatted as a side effect of the format step.
 - `sw-core.js::getCoreResources()` registration not yet needed (no new shipped files yet).
 
-### Phase 0.5 — Backfill: existing-utility tests
-Targeted regression coverage on existing pure code, keeping zero-dep posture:
-- `tests/unit/uuid.test.js`: `v4()` and `v4WithTimestamp()` against the v4 variant-1 regex; uniqueness across many calls; timestamp-prefix matches `Date.now().toString(16).slice(0, 8)`.
-- `tests/unit/domUtils.test.js`: pure helpers only — `queryParams` (encoding, empty object), `listify` (ordered/unordered, empty array), `pluralize` (singular/plural/zero), `jsx` (number/string/array interpolation, others skipped).
+### Phase 0.5 — Backfill: existing-utility tests — ✅ Complete (2026-04-28)
+- ✅ `tests/unit/uuid.test.js`: `v4()` and `v4WithTimestamp()` against the v4 variant-1 regex; uniqueness across many calls; timestamp-prefix matches `Date.now().toString(16).slice(0, 8)`.
+- ✅ `tests/unit/domUtils.test.js`: pure helpers only — `queryParams` (encoding, empty object), `listify` (ordered/unordered, empty array), `pluralize` (singular/plural/zero), `jsx` (number/string/array interpolation, others skipped).
 - Skip: `DataStore.js` (defer to Phase 3 — modified there anyway), `ServiceWorkerManager.js` (browser-only, no good Node test path), DOM helpers in `domUtils.js` (`h`, `CreateSvg`, `htmlToMarkdown`, `isDevelopmentMode`).
 - **Verify:** `npm test` green; coverage extends across two test directories, validating auto-discovery handles nesting.
 
@@ -117,9 +116,10 @@ Targeted regression coverage on existing pure code, keeping zero-dep posture:
 - ✅ `src/engine/deck.js`: `buildDeck()` (52 unique), `shuffle(cards, rng)` (Fisher-Yates, pure). (8 tests)
 - ✅ `src/engine/gameState.js`: `createGame({ seed, players })`. 2/3/4 players supported; 4 display piles; 48 cards dealt round-robin. Throws on invalid player counts. Initial state shape matches the plan sketch. (16 tests)
 - ✅ `src/engine/legalMoves.js`: `legalPlaysFor(state, card)` returns `{ type: 'display', pileIndex }` and `{ type: 'opponent', playerId }` targets. Excludes current player's own face-up pile. (10 tests)
-- ✅ `src/engine/actions.js`: action creators (`start`, `flip`, `flipHeld`, `play`, `hold`) producing the SSE+POST-ready envelope `{ type, payload, by, at? }`.
-- ✅ `src/engine/reducer.js`: pure `(state, action) → newState`. Stamps `at` index on dispatch, appends to `state.log`. Validates preconditions and throws on illegal moves. Winner detection on PLAY (HOLD cannot win). Turn rotates after PLAY/HOLD; FLIP_HELD does not rotate. Replay test confirms `log.reduce(reducer, undefined)` reproduces the final state. (21 tests)
-- **Result:** 74 new engine tests + 20 backfill = **94 total, all green.** Format clean, lint clean.
+- ✅ `src/engine/actions.js`: action creators (`start`, `flip`, `flipHeld`, `play`, `hold`, `callMuggins`) producing the SSE+POST-ready envelope `{ type, payload, by, at? }`.
+- ✅ `src/engine/reducer.js`: pure `(state, action) → newState`. Stamps `at` index on dispatch, appends to `state.log`. Validates preconditions and throws on illegal moves. Winner detection on PLAY (HOLD cannot win). Turn rotates after PLAY/HOLD; FLIP_HELD does not rotate. **`CALL_MUGGINS` is a stub:** the handler returns unchanged play state (only the log row is appended); validation and card penalties land in Phase 7. Replay test confirms `log.reduce(reducer, undefined)` reproduces the final state. (22 tests)
+- **Result:** 75 new engine tests + 20 backfill = **95 total, all green.** Format clean, lint clean.
+- **Addendum (same milestone, after Phase 1 sign-off):** `callMuggins` / `CALL_MUGGINS` were added early so Phase 2 Strategist and the wire envelope can reference the real action type; behavior remains a no-op until Phase 7 replaces the stub.
 
 **Architecture notes captured during build:**
 - Engine modules use **relative imports** (`./card.js`) so they run unchanged in Node's test runner and the browser. UI/glue layer keeps `/src/...` web-root paths.
@@ -169,6 +169,7 @@ Targeted regression coverage on existing pure code, keeping zero-dep posture:
 - **Verify:** Play complete games hot-seat + AI, 2- and 4-player, on phone and desktop. Confirm no illegal-move UI is reachable.
 
 ### Phase 7 — Muggins button
+- Replace the **existing `CALL_MUGGINS` stub** in `reducer.js` with real validation and card movement; finalize `callMuggins` payload (offender, etc.) in `actions.js`.
 - Decide false-call penalty (open question — see below). Recommend: **no penalty for a wrong call** to keep UX low-stakes; simply ignore. Confirm before implementing.
 - "Muggins!" affordance visible to every *human* seat, callable any time another player has just held.
 - On press: engine validates whether the most recent `HOLD` action had a legal play available at the moment it was dispatched (using the action log + state replay or a stored `legalAtFlip` field on the action). If yes → each other player gives the offender one card from their face-down pile.

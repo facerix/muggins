@@ -31,3 +31,10 @@ export const hold = playerId => ({
   payload: {},
   by: playerId,
 });
+
+/** Payload shape finalized in Phase 7 (offender, penalty routing). */
+export const callMuggins = (playerId, payload = {}) => ({
+  type: 'CALL_MUGGINS',
+  payload,
+  by: playerId,
+});

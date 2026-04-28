@@ -119,6 +119,11 @@ const apply = (state, action) => {
       return advanceTurn(next);
     }
 
+    case 'CALL_MUGGINS': {
+      // Stub: validation and card transfers land in Phase 7.
+      return { ...state };
+    }
+
     default:
       throw new Error(`Unknown action type: ${action.type}`);
   }

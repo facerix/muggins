@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { makeCard } from '../../src/engine/card.js';
 import { reducer } from '../../src/engine/reducer.js';
-import { start, flip, flipHeld, play, hold } from '../../src/engine/actions.js';
+import { start, flip, flipHeld, play, hold, callMuggins } from '../../src/engine/actions.js';
 
 const players2 = [
   { name: 'A', kind: 'human' },
@@ -280,4 +280,16 @@ test('reducer throws when a non-START action is applied to undefined state', () 
 test('reducer throws on unknown action type', () => {
   const s = newGame();
   assert.throws(() => reducer(s, { type: 'NOPE', payload: {}, by: 'p0' }), /Unknown action/);
+});
+
+test('CALL_MUGGINS (stub) appends to log without changing play state', () => {
+  const s0 = newGame();
+  const s1 = reducer(s0, callMuggins('p1', { offenderId: 'p0' }));
+  assert.equal(s1.log.length, 2);
+  assert.equal(s1.log[1].type, 'CALL_MUGGINS');
+  assert.equal(s1.log[1].by, 'p1');
+  assert.deepEqual(s1.log[1].payload, { offenderId: 'p0' });
+  const { log: _l0, ...rest0 } = s0;
+  const { log: _l1, ...rest1 } = s1;
+  assert.deepEqual(rest1, rest0);
 });
