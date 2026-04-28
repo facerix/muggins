@@ -156,13 +156,15 @@ Each phase ends in a state where the app is committable, lints, tests pass, and 
 - ✅ `tests/unit/cardSvg.test.js`: `rankLabel` coverage.
 - **Verify:** Open `http://localhost:8090/views-test.html` at phone- and desktop-width; cards and grid stay coherent.
 
-### Phase 5 — Setup screen
-- Render at `<main>` when no active game exists.
-- Form: 2–4 player rows; each row has a name input and a kind selector (`Human`, `Random AI`, `Greedy AI`, `Strategist AI`).
-- "Start game" → builds initial state via `createGame({ seed: cryptoRandom(), players })`, persists via `setActiveGame`, swaps view.
-- "Resume game" button visible if a saved game exists.
-- "Abandon game" clears active game and returns to setup.
-- **Verify:** Manually create games of 2/3/4 players with various human-AI mixes; confirm persistence; confirm reload resumes.
+### Phase 5 — Setup screen — ✅ Complete (2026-04-28)
+- ✅ `src/views/setup.js`: `<main>` mounts `mountSetupView` (no in-memory state) or `mountPendingGameView` (hydrated / post-`START`).
+- ✅ Form: player count 2–4; each row: name + kind (`Human`, `Random AI`, `Greedy AI`, `Strategist AI`). `randomSeed()` uses `crypto.getRandomValues`.
+- ✅ "Start game" → `dispatch(start({ seed, players }))` (reducer + persistence + AI schedule); view refresh.
+- ✅ Reload: `getActiveGame()` hydrates runtime → placeholder (Phase 6 swaps in board). "Change setup" → `resetRuntime()` → setup with **Resume game** (persisted snapshot, no Abandon) plus roster prefill from storage.
+- ✅ "Resume game" when a snapshot exists but runtime was cleared for setup (above path); full auto-hydrate path does not need it.
+- ✅ "Abandon game" → `abandonGame()` → setup (no saved slot).
+- ✅ `sw-core.js` lists `/src/views/setup.js`.
+- **Verify:** Manually create games of 2/3/4 players with various human-AI mixes; confirm persistence; confirm reload resumes; try Change setup → Resume.
 
 ### Phase 6 — Game view + turn loop
 - Render board: 4 display piles in the center; player areas around them (CSS grid; `auto-fit` for 2–4).
