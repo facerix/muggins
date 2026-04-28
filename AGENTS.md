@@ -97,7 +97,7 @@ When adding new JS/HTML/CSS files, register them in `sw-core.js` → `getCoreRes
 
 ## Testing
 
-Use @Browser at `http://localhost:8080` (assume server is already running). Verify UI, interactions, console, service worker.
+Use @Browser at `http://localhost:8090` (assume server is already running). Verify UI, interactions, console, service worker.
 
 ## Checklist
 

@@ -21,4 +21,4 @@ Online PWA implementation of the Muggins card game. See [docs/how-to-play.md](do
 
 ## Dev Server
 
-`npm start` — live-server on port 8080
+`npm start` — live-server on port 8090

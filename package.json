@@ -4,7 +4,7 @@
   "description": "Online Muggins card game — offline-first PWA",
   "main": "index.html",
   "scripts": {
-    "start": "live-server --no-browser",
+    "start": "live-server --no-browser --port=8090",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "prettier --write .",

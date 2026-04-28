@@ -16,7 +16,7 @@ See [docs/how-to-play.md](docs/how-to-play.md) for the rules.
 
 ### Commands
 
-- **Start server**: `npm start` (live-server at http://localhost:8080)
+- **Start server**: `npm start` (live-server at http://localhost:8090)
 - **Lint**: `npm run lint`
 - **Format**: `npm run format`
 - **Auto-fix linting**: `npm run lint:fix`
@@ -58,7 +58,7 @@ Separate `sw.js` (production) and `sw-dev.js` (development) files. Automatically
 ## Getting Started
 
 1. `npm install`
-2. `npm start` — live-server at http://localhost:8080
+2. `npm start` — live-server at http://localhost:8090
 
 ## Credits
 
