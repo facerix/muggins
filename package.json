@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "description": "Online Muggins card game — offline-first PWA",
   "main": "index.html",
+  "type": "module",
   "scripts": {
     "start": "live-server --no-browser --port=8090",
+    "test": "node --test",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "prettier --write .",

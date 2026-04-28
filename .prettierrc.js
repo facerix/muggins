@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   singleQuote: true,
   semi: true,
   tabWidth: 2,

@@ -146,7 +146,9 @@ export class ServiceWorkerManager {
             })
             .then(shouldShow => {
               if (shouldShow) {
-                console.log(`[Muggins] New service worker available. Consider refreshing the page.`);
+                console.log(
+                  `[Muggins] New service worker available. Consider refreshing the page.`
+                );
                 this.#dispatchUpdateEvent(newWorker);
               }
               newWorker.removeEventListener('statechange', handleStateChange);

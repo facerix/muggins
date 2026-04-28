@@ -76,7 +76,7 @@ whenLoaded.then(async () => {
   btnClearCache.addEventListener('click', () => {
     confirmModal.showModal(
       'This will clear all cached data and reload the page. Continue?',
-      'clear-cache',
+      'clear-cache'
     );
   });
 });
