@@ -38,9 +38,12 @@ export const hold = playerId => ({
   by: playerId,
 });
 
-/** Payload shape finalized in Phase 7 (offender, penalty routing). */
-export const callMuggins = (playerId, payload = {}) => ({
+/**
+ * Caller declares the call; reducer derives the offender from the log tail and validates.
+ * Invalid calls (no offense, or self-call) are bad calls — the caller pays the penalty.
+ */
+export const callMuggins = playerId => ({
   type: 'CALL_MUGGINS',
-  payload,
+  payload: {},
   by: playerId,
 });

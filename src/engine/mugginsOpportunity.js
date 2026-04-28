@@ -1,11 +1,15 @@
 import { legalPlaysFor } from './legalMoves.js';
-import { replayFromLog } from './replay.js';
 
 /**
  * After a HOLD, returns whether that hold missed at least one legal play with the flipped card.
  *
  * Preconditions: treats the tail of `state.log`: only considers the case where the **last**
  * entry is HOLD (immediate post-hold window before further actions append).
+ *
+ * Recoverable from current state without replay: the just-held card is now on top of the
+ * offender's `faceUp`. Display-pile tops and opponent `faceUp` tops are unchanged by HOLD.
+ * `legalPlaysFor` excludes the current player's own `faceUp` from opponent targets, so we
+ * pass a temp state with `turn.playerId = offenderId` to mirror the decide-phase view.
  *
  * @returns {{ offenderId: string } | null}
  */
@@ -17,13 +21,12 @@ export const missedLegalOffenderIfLastHold = state => {
   if (last.type !== 'HOLD') return null;
 
   const offenderId = last.by;
-  const beforeHold = replayFromLog(log.slice(0, -1));
-  if (!beforeHold) return null;
-  if (beforeHold.turn.phase !== 'decide') return null;
-  if (beforeHold.turn.playerId !== offenderId) return null;
-  if (!beforeHold.flippedCard) return null;
+  const hand = state.hands.find(h => h.playerId === offenderId);
+  if (!hand || hand.faceUp.length === 0) return null;
+  const heldCard = hand.faceUp[hand.faceUp.length - 1];
 
-  const plays = legalPlaysFor(beforeHold, beforeHold.flippedCard);
+  const tempState = { ...state, turn: { ...state.turn, playerId: offenderId } };
+  const plays = legalPlaysFor(tempState, heldCard);
   if (plays.length === 0) return null;
 
   return { offenderId };

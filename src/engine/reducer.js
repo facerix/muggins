@@ -1,5 +1,6 @@
 import { createGame } from './gameState.js';
 import { legalPlaysFor } from './legalMoves.js';
+import { missedLegalOffender } from './mugginsOpportunity.js';
 
 const stamp = (action, atIndex) => ({ ...action, at: atIndex });
 
@@ -158,8 +159,45 @@ const apply = (state, action) => {
     }
 
     case 'CALL_MUGGINS': {
-      // Stub: validation and card transfers land in Phase 7.
-      return { ...state };
+      // Determine who pays. Self-call is never valid (no offense against yourself).
+      const callerId = action.by;
+      const opp = missedLegalOffender(state);
+      const validCall = opp != null && opp.offenderId !== callerId;
+      const recipientId = validCall ? opp.offenderId : callerId;
+
+      let next = state;
+      for (const giver of state.players) {
+        if (giver.id === recipientId) continue;
+        const giverHand = next.hands.find(h => h.playerId === giver.id);
+        if (!giverHand) continue;
+
+        let card = null;
+        let fromFaceDown = false;
+        if (giverHand.faceDown.length > 0) {
+          card = giverHand.faceDown[giverHand.faceDown.length - 1];
+          fromFaceDown = true;
+        } else if (giverHand.faceUp.length > 0) {
+          card = giverHand.faceUp[giverHand.faceUp.length - 1];
+        }
+        if (!card) continue; // giver has no cards (skip)
+
+        next = replaceHand(next, giver.id, h => ({
+          ...h,
+          faceDown: fromFaceDown ? h.faceDown.slice(0, -1) : h.faceDown,
+          faceUp: fromFaceDown ? h.faceUp : h.faceUp.slice(0, -1),
+        }));
+        next = replaceHand(next, recipientId, h => ({
+          ...h,
+          faceDown: [...h.faceDown, card],
+        }));
+      }
+      // A giver who hands over their last card has no cards left → they win.
+      // (Recipients only gain cards, so they can't become winners here.)
+      next = { ...next, winner: checkWinner(next) };
+      if (next.winner) {
+        next = { ...next, turn: { ...next.turn, phase: 'done' } };
+      }
+      return next;
     }
 
     default:

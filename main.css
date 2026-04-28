@@ -362,6 +362,20 @@ a:focus-visible {
   text-align: center;
 }
 
+.game-board__muggins {
+  align-self: center;
+  font-size: clamp(1rem, 3.6vw, 1.2rem);
+  padding: 0.45rem 1.1rem;
+  background: var(--card-suit-red, #b53030);
+  color: #fff;
+  border-color: transparent;
+}
+
+.game-board__muggins:hover,
+.game-board__muggins:focus-visible {
+  filter: brightness(1.08);
+}
+
 .game-board__dev-ai {
   display: flex;
   flex-wrap: wrap;

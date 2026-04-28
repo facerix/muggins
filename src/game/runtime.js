@@ -21,9 +21,8 @@ const resolveStrategistMuggins = state => {
   for (const p of state.players) {
     const persona = personaForKind(p.kind);
     if (!persona?.shouldCallMuggins(state, p.id)) continue;
-    const opp = missedLegalOffender(state);
-    if (!opp) continue;
-    return reducer(state, callMuggins(p.id, { offenderId: opp.offenderId }));
+    if (!missedLegalOffender(state)) continue;
+    return reducer(state, callMuggins(p.id));
   }
   return state;
 };

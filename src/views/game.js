@@ -1,4 +1,4 @@
-import { flip, flipHeld, hold, play, playHeld } from '/src/engine/actions.js';
+import { callMuggins, flip, flipHeld, hold, play, playHeld } from '/src/engine/actions.js';
 import { legalPlaysFor } from '/src/engine/legalMoves.js';
 import { personaForKind } from '/src/engine/ai/persona.js';
 import { h, isDevelopmentMode } from '/src/domUtils.js';
@@ -44,6 +44,8 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
 
   const winner = state.winner;
   const winnerName = winner ? (state.players.find(p => p.id === winner)?.name ?? winner) : null;
+  const activePid = state.turn.playerId;
+  const activeHuman = !winner && isHumanSeat(state, activePid) && state.turn.phase !== 'done';
 
   if (winner) {
     const banner = h('div', {
@@ -62,6 +64,21 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
 
   const toolbar = h('div', { className: 'game-board__toolbar' }, []);
   toolbar.appendChild(aiHint);
+
+  // Muggins button: active human in flip phase when the previous log entry is a
+  // potentially-muggable action (HOLD/FLIP/FLIP_HELD) by another player. Engine validates
+  // on click; mis-calls penalize the caller (per docs/how-to-play.md § Bad calls).
+  const lastEntry = state.log[state.log.length - 1];
+  const muggableTail =
+    lastEntry &&
+    (lastEntry.type === 'HOLD' || lastEntry.type === 'FLIP' || lastEntry.type === 'FLIP_HELD') &&
+    lastEntry.by !== activePid;
+  if (activeHuman && state.turn.phase === 'flip' && muggableTail) {
+    const mugBtn = h('button', { type: 'button', className: 'game-board__muggins btn' }, []);
+    mugBtn.textContent = 'Muggins!';
+    mugBtn.addEventListener('click', () => dispatch(callMuggins(activePid)));
+    toolbar.appendChild(mugBtn);
+  }
 
   if (isDevelopmentMode()) {
     const raw = globalThis.localStorage?.getItem(DEV_AI_DELAY_MS_STORAGE_KEY);
@@ -127,9 +144,6 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
   syncAiHint();
 
   section.appendChild(toolbar);
-
-  const activePid = state.turn.playerId;
-  const activeHuman = !winner && isHumanSeat(state, activePid) && state.turn.phase !== 'done';
 
   // playCtx: drives the "click a highlighted target" affordance.
   // - decide phase: target plays the flipped card (PLAY).

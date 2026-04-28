@@ -394,14 +394,188 @@ test('reducer throws on unknown action type', () => {
   assert.throws(() => reducer(s, { type: 'NOPE', payload: {}, by: 'p0' }), /Unknown action/);
 });
 
-test('CALL_MUGGINS (stub) appends to log without changing play state', () => {
+// ---------- CALL_MUGGINS ----------
+
+test('CALL_MUGGINS logs an action with empty payload', () => {
+  const s = reducer(newGame(), callMuggins('p1'));
+  const last = s.log[s.log.length - 1];
+  assert.equal(last.type, 'CALL_MUGGINS');
+  assert.equal(last.by, 'p1');
+  assert.deepEqual(last.payload, {});
+});
+
+test('CALL_MUGGINS valid HOLD-source: offender receives one card per other player', () => {
+  let s = winnableState();
+  s = reducer(s, flip('p0'));
+  // p0 flipped 5D; pile 0 top is 4C → adjacent. Holding is a missed legal play.
+  s = reducer(s, hold('p0'));
+  const s1 = reducer(s, callMuggins('p1'));
+  const p0 = s1.hands.find(h => h.playerId === 'p0');
+  const p1 = s1.hands.find(h => h.playerId === 'p1');
+  // p1 gives top of its faceDown (3C) → top of p0 faceDown
+  assert.deepEqual(p0.faceDown[p0.faceDown.length - 1], makeCard(3, 'C'));
+  assert.deepEqual(p1.faceDown, [makeCard(2, 'C')]);
+});
+
+test('CALL_MUGGINS valid FLIP-source: offender receives one card per other player', () => {
+  // p0 had a held-top (5H) playable on pile 0 (4C) but flipped instead. p1 calls.
+  const s0 = {
+    schemaVersion: 1,
+    seed: 1,
+    rngState: 0,
+    players: [
+      { id: 'p0', name: 'A', kind: 'human' },
+      { id: 'p1', name: 'B', kind: 'human' },
+    ],
+    hands: [
+      { playerId: 'p0', faceDown: [], faceUp: [makeCard(5, 'H')] },
+      { playerId: 'p1', faceDown: [makeCard(2, 'C'), makeCard(7, 'D')], faceUp: [] },
+    ],
+    displayPiles: [
+      [makeCard(4, 'C')],
+      [makeCard(7, 'D')],
+      [makeCard(11, 'H')],
+      [makeCard(13, 'S')],
+    ],
+    turn: { playerId: 'p0', phase: 'decide' },
+    flippedCard: makeCard(9, 'C'),
+    log: [
+      { type: 'START', payload: {}, by: 'system', at: 0 },
+      { type: 'FLIP', payload: {}, by: 'p0', at: 1 },
+    ],
+    winner: null,
+  };
+  const s1 = reducer(s0, callMuggins('p1'));
+  const p0 = s1.hands.find(h => h.playerId === 'p0');
+  const p1 = s1.hands.find(h => h.playerId === 'p1');
+  assert.deepEqual(p0.faceDown, [makeCard(7, 'D')]);
+  assert.deepEqual(p1.faceDown, [makeCard(2, 'C')]);
+});
+
+test('CALL_MUGGINS without a missed play is a false call: caller pays', () => {
+  // Right after START, no offense exists.
   const s0 = newGame();
-  const s1 = reducer(s0, callMuggins('p1', { offenderId: 'p0' }));
-  assert.equal(s1.log.length, 2);
-  assert.equal(s1.log[1].type, 'CALL_MUGGINS');
-  assert.equal(s1.log[1].by, 'p1');
-  assert.deepEqual(s1.log[1].payload, { offenderId: 'p0' });
-  const { log: _l0, ...rest0 } = s0;
-  const { log: _l1, ...rest1 } = s1;
-  assert.deepEqual(rest1, rest0);
+  const s1 = reducer(s0, callMuggins('p1'));
+  const p0 = s1.hands.find(h => h.playerId === 'p0');
+  const p1 = s1.hands.find(h => h.playerId === 'p1');
+  // 2-player game: 24 cards each. p0 gives 1 to p1.
+  assert.equal(p0.faceDown.length, 23);
+  assert.equal(p1.faceDown.length, 25);
+  assert.deepEqual(
+    p1.faceDown[p1.faceDown.length - 1],
+    s0.hands.find(h => h.playerId === 'p0').faceDown[
+      s0.hands.find(h => h.playerId === 'p0').faceDown.length - 1
+    ]
+  );
+});
+
+test('CALL_MUGGINS by the offender themselves is treated as a false call', () => {
+  let s = winnableState();
+  s = reducer(s, flip('p0'));
+  s = reducer(s, hold('p0'));
+  // Self-call: offender == caller → invalid → caller (p0) pays.
+  const s1 = reducer(s, callMuggins('p0'));
+  const p0 = s1.hands.find(h => h.playerId === 'p0');
+  const p1 = s1.hands.find(h => h.playerId === 'p1');
+  // p1 (only other player) gives top faceDown to p0.
+  assert.deepEqual(p0.faceDown, [makeCard(3, 'C')]);
+  assert.deepEqual(p1.faceDown, [makeCard(2, 'C')]);
+});
+
+test('CALL_MUGGINS giver with empty faceDown gives from faceUp top', () => {
+  // 3-player setup, post-HOLD with p0 offender; p1 has only faceUp; p2 has only faceDown.
+  const s0 = {
+    schemaVersion: 1,
+    seed: 1,
+    rngState: 0,
+    players: [
+      { id: 'p0', name: 'A', kind: 'human' },
+      { id: 'p1', name: 'B', kind: 'human' },
+      { id: 'p2', name: 'C', kind: 'human' },
+    ],
+    hands: [
+      { playerId: 'p0', faceDown: [], faceUp: [makeCard(5, 'D')] },
+      { playerId: 'p1', faceDown: [], faceUp: [makeCard(8, 'H')] },
+      { playerId: 'p2', faceDown: [makeCard(9, 'C')], faceUp: [] },
+    ],
+    displayPiles: [
+      [makeCard(4, 'C')],
+      [makeCard(7, 'D')],
+      [makeCard(11, 'H')],
+      [makeCard(13, 'S')],
+    ],
+    turn: { playerId: 'p1', phase: 'flip' },
+    flippedCard: null,
+    log: [
+      { type: 'START', payload: {}, by: 'system', at: 0 },
+      { type: 'FLIP', payload: {}, by: 'p0', at: 1 },
+      { type: 'HOLD', payload: {}, by: 'p0', at: 2 },
+    ],
+    winner: null,
+  };
+  const s1 = reducer(s0, callMuggins('p2'));
+  const p0 = s1.hands.find(h => h.playerId === 'p0');
+  const p1 = s1.hands.find(h => h.playerId === 'p1');
+  const p2 = s1.hands.find(h => h.playerId === 'p2');
+  // p1 gave from faceUp (only source); p2 gave from faceDown (only source).
+  assert.deepEqual(p1.faceUp, []);
+  assert.deepEqual(p2.faceDown, []);
+  // p0 receives both cards on top of its faceDown, in player iteration order.
+  assert.deepEqual(p0.faceDown, [makeCard(8, 'H'), makeCard(9, 'C')]);
+});
+
+test('CALL_MUGGINS giver with no cards is skipped', () => {
+  // 3-player setup, post-HOLD with p0 offender; p1 has zero cards; p2 has cards.
+  const s0 = {
+    schemaVersion: 1,
+    seed: 1,
+    rngState: 0,
+    players: [
+      { id: 'p0', name: 'A', kind: 'human' },
+      { id: 'p1', name: 'B', kind: 'human' },
+      { id: 'p2', name: 'C', kind: 'human' },
+    ],
+    hands: [
+      { playerId: 'p0', faceDown: [], faceUp: [makeCard(5, 'D')] },
+      { playerId: 'p1', faceDown: [], faceUp: [] },
+      { playerId: 'p2', faceDown: [makeCard(9, 'C')], faceUp: [] },
+    ],
+    displayPiles: [
+      [makeCard(4, 'C')],
+      [makeCard(7, 'D')],
+      [makeCard(11, 'H')],
+      [makeCard(13, 'S')],
+    ],
+    turn: { playerId: 'p1', phase: 'flip' },
+    flippedCard: null,
+    log: [
+      { type: 'START', payload: {}, by: 'system', at: 0 },
+      { type: 'FLIP', payload: {}, by: 'p0', at: 1 },
+      { type: 'HOLD', payload: {}, by: 'p0', at: 2 },
+    ],
+    winner: null,
+  };
+  const s1 = reducer(s0, callMuggins('p2'));
+  const p0 = s1.hands.find(h => h.playerId === 'p0');
+  const p1 = s1.hands.find(h => h.playerId === 'p1');
+  const p2 = s1.hands.find(h => h.playerId === 'p2');
+  // p1 contributes nothing; p2 gives its only card.
+  assert.deepEqual(p0.faceDown, [makeCard(9, 'C')]);
+  assert.deepEqual(p1.faceDown, []);
+  assert.deepEqual(p1.faceUp, []);
+  assert.deepEqual(p2.faceDown, []);
+});
+
+test('CALL_MUGGINS after a CALL_MUGGINS is a false call (no double-jeopardy)', () => {
+  let s = winnableState();
+  s = reducer(s, flip('p0'));
+  s = reducer(s, hold('p0'));
+  s = reducer(s, callMuggins('p1')); // valid
+  const s2 = reducer(s, callMuggins('p1')); // false: log tail is CALL_MUGGINS
+  const p0 = s2.hands.find(h => h.playerId === 'p0');
+  const p1 = s2.hands.find(h => h.playerId === 'p1');
+  // After valid call: p0.faceDown=[3C], p1.faceDown=[2C].
+  // After false call by p1: p0 gives 3C → p1.
+  assert.deepEqual(p0.faceDown, []);
+  assert.deepEqual(p1.faceDown, [makeCard(2, 'C'), makeCard(3, 'C')]);
 });
