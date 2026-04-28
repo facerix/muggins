@@ -174,7 +174,7 @@ Each phase ends in a state where the app is committable, lints, tests pass, and 
 - ✅ `main.css`: `.game-board*` responsive grid + legal-highlight outlines; `sw-core.js::getCoreResources()` lists `/src/views/game.js`.
 - **Verify:** Play complete games hot-seat + AI, 2- and 4-player, phone + desktop. Confirm no illegal-move UI is reachable.
 
-### Phase 6.5 — Held-top play option (post-Phase 6 fix)
+### Phase 6.5 — Held-top play option (post-Phase 6 fix; ✅ Complete 2026-04-28)
 - The original turn loop only allowed `FLIP` (or `FLIP_HELD`) at the start of the turn. Per the rules, the player may **also** play the top of their face-up (held) pile if a legal target exists; flipping when the held-top has a legal target is grounds for Muggins.
 - ✅ `actions.js`: new `playHeld(playerId, target)` → `PLAY_HELD` envelope.
 - ✅ `reducer.js`: `PLAY_HELD` requires flip phase + non-empty `faceUp`; consumes face-up top; checkWinner; advances turn (no FLIP, no decide phase). HOLD remains decide-phase only — flip phase only allows `PLAY_HELD | FLIP | FLIP_HELD`.
