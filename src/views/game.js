@@ -42,19 +42,8 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
 
   const section = h('section', { className: 'game-board' }, []);
 
-  const winner = state.winner;
-  const winnerName = winner ? (state.players.find(p => p.id === winner)?.name ?? winner) : null;
   const activePid = state.turn.playerId;
-  const activeHuman = !winner && isHumanSeat(state, activePid) && state.turn.phase !== 'done';
-
-  if (winner) {
-    const banner = h('div', {
-      className: 'game-board__banner game-board__banner--winner',
-      role: 'status',
-    });
-    banner.textContent = `Winner: ${winnerName}`;
-    section.appendChild(banner);
-  }
+  const activeHuman = isHumanSeat(state, activePid) && state.turn.phase !== 'done';
 
   const aiHint = h('p', {
     className: 'game-board__ai-hint u-muted u-hidden',
@@ -287,7 +276,7 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
   state.players.forEach(playerRow => {
     const hid = playerRow.id;
     const hand = state.hands.find(h => h.playerId === hid);
-    const isActive = state.turn.playerId === hid && !winner;
+    const isActive = state.turn.playerId === hid;
     const slot = h('div', { className: 'game-board__player' }, []);
     if (isActive) slot.classList.add('game-board__player--active');
 

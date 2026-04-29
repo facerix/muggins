@@ -48,6 +48,7 @@ const CacheConfig = {
       '/src/views/cardSvg.js',
       '/src/views/game.js',
       '/src/views/setup.js',
+      '/src/views/postGame.js',
       '/components/CardPile.js',
       '/components/ConfirmationModal.js',
       '/components/UpdateNotification.js',

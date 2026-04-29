@@ -14,7 +14,8 @@ import {
 } from '/src/game/runtime.js';
 import { isDevelopmentMode } from '/src/domUtils.js';
 import { mountGameView } from '/src/views/game.js';
-import { mountSetupView } from '/src/views/setup.js';
+import { mountPostGameView } from '/src/views/postGame.js';
+import { mountSetupView, randomSeed } from '/src/views/setup.js';
 import { serviceWorkerManager } from '/src/ServiceWorkerManager.js';
 import '/components/UpdateNotification.js';
 
@@ -75,6 +76,19 @@ function refreshMain(options = {}) {
         : undefined,
       onSubmit: ({ seed, players }) => {
         dispatch(start({ seed, players }));
+      },
+    });
+    return;
+  }
+
+  if (state.winner) {
+    mountPostGameView(main, {
+      getState,
+      dispatch,
+      randomSeed,
+      onBackToSetup: () => {
+        abandonGame();
+        refreshMain({ skipHydrateFromStorage: true });
       },
     });
     return;

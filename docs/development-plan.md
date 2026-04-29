@@ -196,10 +196,11 @@ Each phase ends in a state where the app is committable, lints, tests pass, and 
 - ✅ Tests added in `tests/engine/reducer.test.js`: valid HOLD-source, valid FLIP-source, false call (no offense), self-call as false call, empty-faceDown giver falls back to faceUp, both-empty giver skipped, `CALL_MUGGINS` after `CALL_MUGGINS` is a false call. **133 tests, all green.**
 - **Verify:** `npm test`, `npm run format`, `npm run lint` all clean. Manual playtest success: pair Random AI (susceptible) + Strategist (will call) + a human, confirm Muggins button shows / hides correctly and penalties land on the right player.
 
-### Phase 8 — Win screen + new game
-- When `state.winner` is set, runtime swaps to `views/postGame.js`: winner name, simple stats (turns played, Muggins calls), "Play again with same seats" / "Back to setup" buttons.
-- Past games are NOT retained at v1 (single-slot persistence). Note as a future enhancement.
-- **Verify:** Confirm post-game view renders; restart flow works.
+### Phase 8 — Win screen + new game — ✅ Complete (2026-04-28)
+- ✅ When `state.winner` is set, `index.js` mounts `views/postGame.js` (not the live board): winner name, stats (**turns played** = count of `PLAY` / `PLAY_HELD` / `HOLD` in the log; **Muggins calls** = `CALL_MUGGINS` rows), "Play again with same seats" (`start` + new seed, same roster) / "Back to setup" (`abandonGame` → setup).
+- ✅ Past games are NOT retained at v1 (single-slot persistence); short note on the post-game screen + future enhancement in this plan.
+- ✅ `sw-core.js` lists `/src/views/postGame.js`. Unit tests: `tests/unit/postGame.test.js`.
+- **Verify:** Post-game view after win; reload on finished game shows post-game; Play again deals a new game; Back to setup clears slot.
 
 ### Phase 9 — Polish (optional, post-MVP)
 Each item independently shippable:
