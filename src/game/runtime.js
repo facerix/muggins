@@ -16,6 +16,8 @@ let aiDelayMs = 1000;
 let aiJitterHalfMs = 300;
 /** Production: random delay in [base − half, base + half]; dev/tests: usually off for fixed control. */
 let aiJitterEnabled = true;
+/** While paused, AI timers are cleared and {@link scheduleAiIfNeeded} is a no-op. */
+let isPaused = false;
 
 const resolveStrategistMuggins = state => {
   for (const p of state.players) {
@@ -42,6 +44,7 @@ export const isAiScheduled = () => aiTimer != null;
 
 const scheduleAiIfNeeded = () => {
   clearAiTimer();
+  if (isPaused) return;
   const state = currentState;
   if (!state?.players || state.winner || state.turn.phase === 'done') return;
 
@@ -122,6 +125,26 @@ export function resetRuntime() {
   clearAiTimer();
   currentState = null;
 }
+
+/**
+ * Suspend AI scheduling (e.g. while a blocking modal is open). Cancels any
+ * pending timer so the AI doesn't act behind the modal. Idempotent.
+ */
+export function pauseRuntime() {
+  if (isPaused) return;
+  isPaused = true;
+  clearAiTimer();
+}
+
+/** Resume AI scheduling, immediately rescheduling if it's an AI's turn. Idempotent. */
+export function resumeRuntime() {
+  if (!isPaused) return;
+  isPaused = false;
+  scheduleAiIfNeeded();
+}
+
+/** True while {@link pauseRuntime} has suppressed AI scheduling. */
+export const isRuntimePaused = () => isPaused;
 
 /** Clear storage slot and in-memory runtime (abandon game). */
 export function abandonGame() {

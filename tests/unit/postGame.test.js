@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { postGameStats, rosterFromState } from '/src/views/postGame.js';
+import { postGameStats, rosterFromState } from '/src/game/postGameStats.js';
 
 test('postGameStats counts turn-advancing actions and Muggins', () => {
   const state = {

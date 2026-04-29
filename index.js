@@ -10,14 +10,17 @@ import {
   dispatch,
   getState,
   hydrateRuntime,
-  resetRuntime,
+  pauseRuntime,
+  resumeRuntime,
 } from '/src/game/runtime.js';
 import { isDevelopmentMode } from '/src/domUtils.js';
 import { mountGameView } from '/src/views/game.js';
-import { mountPostGameView } from '/src/views/postGame.js';
-import { mountSetupView, randomSeed } from '/src/views/setup.js';
+import { randomSeed } from '/src/newGameSetup.js';
+import { postGameStats, rosterFromState } from '/src/game/postGameStats.js';
 import { serviceWorkerManager } from '/src/ServiceWorkerManager.js';
 import '/components/UpdateNotification.js';
+import '/components/NewGameModal.js';
+import '/components/GameOverModal.js';
 
 function bootAiTiming() {
   if (isDevelopmentMode()) {
@@ -37,10 +40,8 @@ bootAiTiming();
 
 /**
  * Hydrate reducer runtime from persisted slot when Storage has a snapshot but RAM does not (reload).
- * Skip when transitioning to setup while a snapshot still exists (Change setup → Resume UX).
  */
-function syncHydrateFromStorage(skip) {
-  if (skip) return;
+function syncHydrateFromStorage() {
   const saved = getActiveGame();
   if (saved && getState() == null) {
     hydrateRuntime(saved);
@@ -48,49 +49,40 @@ function syncHydrateFromStorage(skip) {
 }
 
 /**
- * Setup vs game board depending on in-memory runtime (`getState()`).
+ * Tracks the most recent winner+log key we've already opened the game-over modal for,
+ * so subsequent refresh ticks (e.g. from unrelated DataStore writes) don't reopen it
+ * after the user dismissed.
  */
-function refreshMain(options = {}) {
-  const skipHydrate = Boolean(options.skipHydrateFromStorage);
-  syncHydrateFromStorage(skipHydrate);
+let lastWinnerShownFor = null;
+
+/**
+ * Render the board (if a game exists) and open whichever modal applies.
+ * - No state → empty <main> (green background) + non-dismissable new-game-modal.
+ * - State without winner → game board, no modal.
+ * - State with winner → final game board behind a dismissable game-over-modal.
+ */
+function refreshMain() {
+  syncHydrateFromStorage();
 
   const main = document.querySelector('main');
+  const newGameModal = document.querySelector('new-game-modal');
+  const gameOverModal = document.querySelector('game-over-modal');
   const state = getState();
 
   if (!state) {
+    main.replaceChildren();
+    if (typeof main.__cleanupGame === 'function') {
+      main.__cleanupGame();
+      main.__cleanupGame = undefined;
+    }
+    gameOverModal.close();
+    lastWinnerShownFor = null;
+
     const persisted = getActiveGame();
     const initialPlayers =
-      persisted?.players?.map(p => ({
-        name: p.name,
-        kind: p.kind,
-      })) ?? undefined;
-
-    mountSetupView(main, {
-      initialPlayers,
-      hasSavedGame: Boolean(persisted),
-      onResume: persisted
-        ? () => {
-            hydrateRuntime(getActiveGame());
-            refreshMain({ skipHydrateFromStorage: true });
-          }
-        : undefined,
-      onSubmit: ({ seed, players }) => {
-        dispatch(start({ seed, players }));
-      },
-    });
-    return;
-  }
-
-  if (state.winner) {
-    mountPostGameView(main, {
-      getState,
-      dispatch,
-      randomSeed,
-      onBackToSetup: () => {
-        abandonGame();
-        refreshMain({ skipHydrateFromStorage: true });
-      },
-    });
+      persisted?.players?.map(p => ({ name: p.name, kind: p.kind })) ?? undefined;
+    pauseRuntime();
+    newGameModal.showModal({ initialPlayers, dismissable: false });
     return;
   }
 
@@ -101,10 +93,29 @@ function refreshMain(options = {}) {
       abandonGame();
     },
     onChangeSetup: () => {
-      resetRuntime();
-      refreshMain({ skipHydrateFromStorage: true });
+      // Don't reset runtime — pause AI scheduling and open the new-game modal
+      // dismissable. The board stays mounted underneath; dismissing resumes
+      // play, submitting starts a new game (replaces the active slot).
+      pauseRuntime();
+      newGameModal.showModal({
+        initialPlayers: rosterFromState(state),
+        dismissable: true,
+      });
     },
   });
+
+  if (state.winner) {
+    const key = `${state.winner}:${state.log.length}`;
+    if (lastWinnerShownFor !== key) {
+      const winnerName = state.players.find(p => p.id === state.winner)?.name ?? state.winner;
+      const { turnsPlayed, mugginsCalls } = postGameStats(state);
+      gameOverModal.showModal({ winnerName, turnsPlayed, mugginsCalls });
+      lastWinnerShownFor = key;
+    }
+  } else {
+    gameOverModal.close();
+    lastWinnerShownFor = null;
+  }
 }
 
 /** @param {CustomEvent} evt */
@@ -122,19 +133,46 @@ function activeGameStorageChanged(evt) {
   return false;
 }
 
-customElements.whenDefined('update-notification').then(async () => {
+Promise.all([
+  customElements.whenDefined('update-notification'),
+  customElements.whenDefined('new-game-modal'),
+  customElements.whenDefined('game-over-modal'),
+]).then(async () => {
   const updateNotification = document.querySelector('update-notification');
+  const newGameModal = document.querySelector('new-game-modal');
+  const gameOverModal = document.querySelector('game-over-modal');
 
   window.addEventListener('sw-update-available', event => {
     console.log('Service worker update available, showing notification');
     updateNotification.show(event.detail.pendingWorker);
   });
 
+  newGameModal.addEventListener('submit', evt => {
+    const { seed, players } = evt.detail;
+    dispatch(start({ seed, players }));
+  });
+
+  // Fires for any close path (Esc, backdrop, ×, submit) — resume after the
+  // submit handler has already dispatched, so the new game's AI can schedule.
+  newGameModal.addEventListener('close', () => {
+    resumeRuntime();
+  });
+
+  gameOverModal.addEventListener('play-again', () => {
+    const cur = getState();
+    if (!cur?.winner) return;
+    dispatch(start({ seed: randomSeed(), players: rosterFromState(cur) }));
+  });
+
+  gameOverModal.addEventListener('back-to-setup', () => {
+    abandonGame();
+  });
+
   await DataStore.init();
 
   DataStore.addEventListener('change', evt => {
     if (!activeGameStorageChanged(evt)) return;
-    refreshMain({ skipHydrateFromStorage: true });
+    refreshMain();
   });
 
   refreshMain();
