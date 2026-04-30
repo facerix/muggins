@@ -89,8 +89,8 @@ header {
   h1 {
     flex: 1;
     margin: 0;
-    text-align: center;
     min-width: 0;
+    justify-content: center;
   }
 }
 
