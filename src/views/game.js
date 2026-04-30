@@ -27,9 +27,9 @@ function isHumanSeat(state, playerId) {
 
 /**
  * @param {HTMLElement} main
- * @param {{ getState: () => object | null, dispatch: (a: object) => object, onAbandon: () => void, onChangeSetup?: () => void }} opts
+ * @param {{ getState: () => object | null, dispatch: (a: object) => object, uiFrozen?: boolean }} opts
  */
-export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSetup }) {
+export function mountGameView(main, { getState, dispatch, uiFrozen }) {
   if (typeof main.__cleanupGame === 'function') {
     main.__cleanupGame();
     main.__cleanupGame = undefined;
@@ -41,6 +41,10 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
   if (!state) return;
 
   const section = h('section', { className: 'game-board' }, []);
+  if (uiFrozen) {
+    section.classList.add('game-board--frozen');
+    section.setAttribute('inert', '');
+  }
 
   const activePid = state.turn.playerId;
   const activeHuman = isHumanSeat(state, activePid) && state.turn.phase !== 'done';
@@ -50,9 +54,7 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
     'aria-live': 'polite',
   });
   aiHint.textContent = 'AI is thinking…';
-
-  const toolbar = h('div', { className: 'game-board__toolbar' }, []);
-  toolbar.appendChild(aiHint);
+  section.appendChild(aiHint);
 
   // Muggins button: active human in flip phase when the previous log entry is a
   // potentially-muggable action (HOLD/FLIP/FLIP_HELD) by another player. Engine validates
@@ -110,7 +112,7 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
     devRow.appendChild(devLabel);
     devRow.appendChild(range);
     devRow.appendChild(valueOut);
-    toolbar.appendChild(devRow);
+    section.appendChild(devRow);
   }
 
   const syncAiHint = () => {
@@ -126,13 +128,16 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
     aiHint.classList.toggle('u-hidden', !show);
   };
 
-  const pulseId = window.setInterval(syncAiHint, 120);
-  main.__cleanupGame = () => {
-    window.clearInterval(pulseId);
-  };
-  syncAiHint();
-
-  section.appendChild(toolbar);
+  if (!uiFrozen) {
+    const pulseId = window.setInterval(syncAiHint, 120);
+    main.__cleanupGame = () => {
+      window.clearInterval(pulseId);
+    };
+    syncAiHint();
+  } else {
+    aiHint.classList.add('u-hidden');
+    main.__cleanupGame = () => {};
+  }
 
   // playCtx: drives the "click a highlighted target" affordance.
   // - decide phase: target plays the flipped card (PLAY).
@@ -357,24 +362,6 @@ export function mountGameView(main, { getState, dispatch, onAbandon, onChangeSet
   });
 
   section.appendChild(playersHost);
-
-  const foot = h('div', { className: 'game-board__foot' }, []);
-  const btns = h('div', { className: 'game-board__foot-buttons' }, []);
-
-  if (typeof onChangeSetup === 'function') {
-    const setupBtn = h('button', { type: 'button', className: 'btn' }, []);
-    setupBtn.textContent = 'Change setup';
-    setupBtn.addEventListener('click', () => onChangeSetup());
-    btns.appendChild(setupBtn);
-  }
-
-  const abandonBtn = h('button', { type: 'button', className: 'btn' }, []);
-  abandonBtn.textContent = 'Abandon game';
-  abandonBtn.addEventListener('click', () => onAbandon());
-  btns.appendChild(abandonBtn);
-
-  foot.appendChild(btns);
-  section.appendChild(foot);
 
   main.appendChild(section);
 }

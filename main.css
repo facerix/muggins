@@ -4,6 +4,17 @@
   /* Chrome-only for now but this will allow smooth size transitions */
   interpolate-size: allow-keywords;
 
+  --header-bg-color: #163d24;
+  --header-text-color: #f0f7f3;
+  --bg-color: #1a6b3c;
+  --text-color: #f0f7f3;
+
+  --modal-header-bg-color: #0b1e12;
+  --modal-header-text-color: #f0f7f3;
+  --modal-bg-color: white;
+  --modal-text-color: #f0f7f3;
+  --modal-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+
   --accent-color: #f0f7f3;
   --highlight-color: #c9a227;
 
@@ -33,13 +44,17 @@ html {
   box-sizing: inherit;
 }
 
+*[hidden] {
+  display: none !important;
+}
+
 body {
   display: flex;
   flex-direction: column;
   padding: 0;
   margin: 0;
-  background-color: #163d24;
-  color: #f0f7f3;
+  background-color: var(--bg-color);
+  color: var(--text-color);
 
   font-family: Futura, 'Trebuchet MS', Arial, sans-serif;
   font-style: normal;
@@ -63,6 +78,8 @@ header {
   display: flex;
   align-items: center;
   padding: 0 0.25rem;
+  background-color: var(--header-bg-color);
+  color: var(--header-text-color);
 
   img {
     max-height: 40px;
@@ -71,15 +88,48 @@ header {
 
   h1 {
     flex: 1;
-    margin-right: 50px;
+    margin: 0;
     text-align: center;
+    min-width: 0;
   }
 }
 
-header#main-head {
-  justify-content: space-between;
-  padding: 0 8px;
-  border-bottom: 1px solid var(--accent-color);
+.header-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid rgba(240, 247, 243, 0.45);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: rgba(0, 0, 0, 0.28);
+  border-color: var(--highlight-color);
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--highlight-color);
+  outline-offset: 2px;
+}
+
+.icon-btn img {
+  width: 1.375rem;
+  height: 1.375rem;
+  display: block;
+  pointer-events: none;
 }
 
 .header-identity {
@@ -104,6 +154,7 @@ h4 {
   display: flex;
   flex-direction: row;
   align-items: center;
+  flex: 1;
 }
 
 #logo {
@@ -253,12 +304,9 @@ a:focus-visible {
   flex: 1 1 auto;
 }
 
-.game-board__toolbar {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.35rem;
-  min-height: 1.5rem;
+.game-board--frozen {
+  opacity: 0.92;
+  filter: saturate(0.92);
 }
 
 .game-board__ai-hint {
@@ -447,18 +495,6 @@ a:focus-visible {
   gap: 0.35rem;
 }
 
-.game-board__foot {
-  margin-top: auto;
-  padding-top: 0.75rem;
-}
-
-.game-board__foot-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: center;
-}
-
 /* background scroll fix for dialogs */
 dialog {
   overscroll-behavior: contain;
@@ -473,30 +509,22 @@ dialog::backdrop {
 
 /* Small devices (e.g. phones, 575px and under) */
 @media (max-width: 575px) {
-  header > img {
-    display: none;
-  }
+  /* no special styles */
 }
 
 /* Small devices (landscape phones, 576px and up) */
 @media (min-width: 576px) {
-  header > img {
-    display: none;
-  }
+  /* no special styles */
 }
 
 /* Medium devices (tablets, 768px and up) */
 @media (min-width: 768px) {
-  header > img {
-    display: block;
-  }
+  /* no special styles */
 }
 
 /* Large devices (desktops, 992px and up) */
 @media (min-width: 992px) {
-  header > img {
-    display: block;
-  }
+  /* no special styles */
 }
 
 /* web component placeholders */

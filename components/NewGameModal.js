@@ -32,16 +32,25 @@ function defaultPlayers(count) {
 
 const CSS = `
 :host {
+  --modal-header-bg-color: #0b1e12;
+  --modal-header-text-color: #f0f7f3;
+  --modal-bg-color: white;
+  --modal-text-color: black;
+  --modal-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --modal-primary-button-bg-color: #1a6b3c;
+  --modal-primary-button-text-color: white;
+  --modal-backdrop-color: rgba(0, 0, 0, 0.45);
+
   dialog {
     padding: 0;
     border: none;
     border-radius: 0.5rem;
     min-width: min(420px, 92vw);
     max-width: min(560px, 92vw);
-    background-color: #163d24;
-    color: #f0f7f3;
+    background-color: var(--modal-bg-color);
+    color: var(--modal-text-color);
     font-family: Futura, 'Trebuchet MS', Arial, sans-serif;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+    box-shadow: var(--modal-box-shadow);
     overscroll-behavior: contain;
 
     &[open] {
@@ -53,7 +62,7 @@ const CSS = `
   dialog::backdrop {
     overflow: hidden;
     overscroll-behavior: contain;
-    background-color: rgba(0, 0, 0, 0.45);
+    background-color: var(--modal-backdrop-color);
   }
 
   header {
@@ -61,7 +70,8 @@ const CSS = `
     justify-content: space-between;
     align-items: center;
     padding: 0.5rem 0.5rem 0.5rem 1rem;
-    background-color: rgba(0, 0, 0, 0.25);
+    background-color: var(--modal-header-bg-color);
+    color: var(--modal-header-text-color);
 
     h3 {
       margin: 0.5rem 0;
@@ -98,7 +108,7 @@ const CSS = `
     border-radius: 6px;
     border: 1px solid rgba(201, 162, 39, 0.7);
     background-color: rgba(201, 162, 39, 0.14);
-    color: #f0f7f3;
+    color: var(--modal-text-color);
     font-size: 0.9rem;
     line-height: 1.4;
   }
@@ -127,9 +137,9 @@ const CSS = `
     align-items: center;
   }
 
-  .player-slot {
+  label {
     font-size: 0.85rem;
-    color: rgba(240, 247, 243, 0.88);
+    color: var(--modal-text-color);
   }
 
   input[type="text"],
@@ -159,14 +169,13 @@ const CSS = `
     padding: 0.4em 1.25em;
     border-radius: 5px;
     border: 1px solid rgba(240, 247, 243, 0.6);
-    background-color: rgba(240, 247, 243, 0.12);
-    color: inherit;
+    background-color: var(--modal-primary-button-bg-color);
+    color: var(--modal-primary-button-text-color);
     cursor: pointer;
 
     &:hover,
     &:focus-visible {
       outline: #f0f7f3 auto 1px;
-      background-color: rgba(240, 247, 243, 0.22);
     }
   }
 
@@ -175,7 +184,7 @@ const CSS = `
       grid-template-columns: 1fr;
       gap: 0.35rem;
     }
-    .player-slot {
+    label {
       grid-column: 1 / -1;
     }
   }
@@ -298,12 +307,13 @@ class NewGameModal extends HTMLElement {
       : defaultPlayers(count);
 
     drafts.forEach((draft, idx) => {
-      const legend = h('span', { className: 'player-slot' }, []);
-      legend.textContent = `Seat ${idx + 1}`;
+      const label = h('label', {
+        htmlFor: `new-game-name-${idx}`,
+        textContent: `Seat ${idx + 1}`,
+      });
 
       const nameInput = h('input', {
         type: 'text',
-        autocomplete: 'nickname',
         maxLength: 48,
       });
       nameInput.value = draft.name;
@@ -321,7 +331,7 @@ class NewGameModal extends HTMLElement {
 
       this.#rowBindings.push({ name: nameInput, kind: kindSelect });
       this.#playersHost.appendChild(
-        h('div', { className: 'player-row' }, [legend, nameInput, kindSelect])
+        h('div', { className: 'player-row' }, [label, nameInput, kindSelect])
       );
     });
   }

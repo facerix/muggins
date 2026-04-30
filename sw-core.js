@@ -64,6 +64,8 @@ const CacheConfig = {
       '/icons/icon512_maskable.png',
       '/icons/icon512_rounded.png',
       '/icons/icon-192x192.png',
+      '/images/cog.svg',
+      '/images/exit.svg',
     ];
   },
 };

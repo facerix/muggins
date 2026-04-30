@@ -15,16 +15,25 @@ import { h } from '/src/domUtils.js';
 
 const CSS = `
 :host {
+  --modal-header-bg-color: #0b1e12;
+  --modal-header-text-color: #f0f7f3;
+  --modal-bg-color: white;
+  --modal-text-color: black;
+  --modal-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --modal-primary-button-bg-color: #1a6b3c;
+  --modal-primary-button-text-color: white;
+  --modal-backdrop-color: rgba(0, 0, 0, 0.45);
+  
   dialog {
     padding: 0;
     border: none;
     border-radius: 0.5rem;
     min-width: min(360px, 92vw);
     max-width: min(520px, 92vw);
-    background-color: #163d24;
-    color: #f0f7f3;
+    background-color: var(--modal-bg-color);
+    color: var(--modal-text-color);
     font-family: Futura, 'Trebuchet MS', Arial, sans-serif;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+    box-shadow: var(--modal-box-shadow);
     overscroll-behavior: contain;
 
     &[open] {
@@ -36,7 +45,7 @@ const CSS = `
   dialog::backdrop {
     overflow: hidden;
     overscroll-behavior: contain;
-    background-color: rgba(0, 0, 0, 0.45);
+    background-color: var(--modal-backdrop-color);
   }
 
   header {
@@ -44,7 +53,8 @@ const CSS = `
     justify-content: space-between;
     align-items: center;
     padding: 0.5rem 0.5rem 0.5rem 1rem;
-    background-color: rgba(0, 0, 0, 0.25);
+    background-color: var(--modal-header-bg-color);
+    color: var(--modal-header-text-color);
 
     h3 {
       margin: 0.5rem 0;
@@ -104,7 +114,8 @@ const CSS = `
     margin: 0;
     font-size: 0.85rem;
     line-height: 1.4;
-    color: rgba(240, 247, 243, 0.72);
+    color: var(--modal-text-color);
+    opacity: 0.72;
   }
 
   .actions {
@@ -128,21 +139,19 @@ const CSS = `
     font-variant: common-ligatures small-caps;
     padding: 0.4em 1.25em;
     border-radius: 5px;
-    border: 1px solid rgba(240, 247, 243, 0.6);
-    background-color: rgba(240, 247, 243, 0.12);
-    color: inherit;
+    border: 1px solid var(--modal-text-color);
     cursor: pointer;
 
     &:hover,
     &:focus-visible {
-      outline: #f0f7f3 auto 1px;
-      background-color: rgba(240, 247, 243, 0.22);
+      outline: var(--modal-primary-button-text-color) auto 1px;
     }
   }
 
   button.action.primary {
     font-weight: 600;
-    background-color: rgba(240, 247, 243, 0.2);
+    background-color: var(--modal-primary-button-bg-color);
+    color: var(--modal-primary-button-text-color);
   }
 }
 `;

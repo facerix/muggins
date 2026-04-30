@@ -13,13 +13,24 @@ import { h } from '/src/domUtils.js';
 
 const CSS = `
 :host {
+  --modal-header-bg-color: #0b1e12;
+  --modal-header-text-color: #f0f7f3;
+  --modal-bg-color: white;
+  --modal-text-color: black;
+  --modal-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --modal-primary-button-bg-color: #1a6b3c;
+  --modal-primary-button-text-color: white;
+  --modal-backdrop-color: rgba(0, 0, 0, 0.45);
+
   dialog {
     padding: 0;
     border: none;
     border-radius: 0.5rem;
     min-width: min(360px, 90vw);
     max-width: min(560px, 90vw);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    background-color: var(--modal-bg-color);
+    color: var(--modal-text-color);
+    box-shadow: var(--modal-box-shadow);
 
     &[open] {
       display: flex;
@@ -27,9 +38,15 @@ const CSS = `
     }
   }
 
+  dialog::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
+    background-color: var(--modal-backdrop-color);
+  }
+
   header {
-    background-color: black;
-    color: white;
+    background-color: var(--modal-header-bg-color);
+    color: var(--modal-header-text-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -87,9 +104,9 @@ const CSS = `
       }
 
       input[type="submit"] {
-        background-color: #274764;
-        border-color: #274764;
-        color: white;
+        background-color: var(--modal-primary-button-bg-color);
+        border-color: var(--modal-primary-button-bg-color);
+        color: var(--modal-primary-button-text-color);
       }
 
       input[type="button"]:hover,

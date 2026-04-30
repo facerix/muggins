@@ -18,6 +18,9 @@ import { mountGameView } from '/src/views/game.js';
 import { randomSeed } from '/src/newGameSetup.js';
 import { postGameStats, rosterFromState } from '/src/game/postGameStats.js';
 import { serviceWorkerManager } from '/src/ServiceWorkerManager.js';
+import '/components/ConfirmationModal.js';
+import '/components/GameOverModal.js';
+import '/components/NewGameModal.js';
 import '/components/UpdateNotification.js';
 import '/components/NewGameModal.js';
 import '/components/GameOverModal.js';
@@ -86,23 +89,7 @@ function refreshMain() {
     return;
   }
 
-  mountGameView(main, {
-    getState,
-    dispatch,
-    onAbandon: () => {
-      abandonGame();
-    },
-    onChangeSetup: () => {
-      // Don't reset runtime — pause AI scheduling and open the new-game modal
-      // dismissable. The board stays mounted underneath; dismissing resumes
-      // play, submitting starts a new game (replaces the active slot).
-      pauseRuntime();
-      newGameModal.showModal({
-        initialPlayers: rosterFromState(state),
-        dismissable: true,
-      });
-    },
-  });
+  mountGameView(main, { getState, dispatch });
 
   if (state.winner) {
     const key = `${state.winner}:${state.log.length}`;
@@ -135,16 +122,48 @@ function activeGameStorageChanged(evt) {
 
 Promise.all([
   customElements.whenDefined('update-notification'),
+  customElements.whenDefined('confirmation-modal'),
   customElements.whenDefined('new-game-modal'),
   customElements.whenDefined('game-over-modal'),
 ]).then(async () => {
   const updateNotification = document.querySelector('update-notification');
+  const confirmationModal = document.querySelector('confirmation-modal');
   const newGameModal = document.querySelector('new-game-modal');
   const gameOverModal = document.querySelector('game-over-modal');
+  const gameSetupBtn = document.querySelector('#game-setup-btn');
+  const abandonBtn = document.querySelector('#game-abandon-btn');
 
   window.addEventListener('sw-update-available', event => {
     console.log('Service worker update available, showing notification');
     updateNotification.show(event.detail.pendingWorker);
+  });
+
+  gameSetupBtn.addEventListener('click', () => {
+    confirmationModal.showModal('Are you sure you want to change the game setup?', 'change-setup');
+  });
+
+  abandonBtn.addEventListener('click', () => {
+    confirmationModal.showModal('Quit this game: are you sure?', 'abandon-game');
+  });
+
+  confirmationModal.addEventListener('confirm', event => {
+    switch (event.detail.context) {
+      case 'change-setup':
+        // Don't reset runtime — pause AI scheduling and open the new-game modal
+        // dismissable. The board stays mounted underneath; dismissing resumes
+        // play, submitting starts a new game (replaces the active slot).
+        pauseRuntime();
+        newGameModal.showModal({
+          initialPlayers: rosterFromState(getState()),
+          dismissable: true,
+        });
+        break;
+      case 'abandon-game':
+        abandonGame();
+        break;
+      default:
+        break;
+    }
   });
 
   newGameModal.addEventListener('submit', evt => {

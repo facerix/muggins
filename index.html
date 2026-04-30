@@ -24,14 +24,25 @@
   </head>
 
   <body class="u-fill-height">
-    <header>
-      <img src="/icon.svg" alt="Muggins logo" />
+    <header id="main-head">
+      <div class="header-brand">
+        <img src="/icon.svg" alt="" width="40" height="40" />
+      </div>
       <h1>Muggins</h1>
+      <div class="header-actions">
+        <button type="button" class="icon-btn" id="game-setup-btn">
+          <img src="/images/cog.svg" alt="" width="22" height="22" />
+        </button>
+        <button type="button" class="icon-btn" id="game-abandon-btn">
+          <img src="/images/exit.svg" alt="" width="22" height="22" />
+        </button>
+      </div>
     </header>
     <main class="u-center"></main>
 
     <footer id="main-foot">Another&nbsp;<a href="/about.html">Facerix</a>&nbsp;creation</footer>
 
+    <confirmation-modal></confirmation-modal>
     <update-notification></update-notification>
     <new-game-modal></new-game-modal>
     <game-over-modal></game-over-modal>
