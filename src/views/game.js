@@ -68,7 +68,7 @@ export function mountGameView(main, { getState, dispatch, uiFrozen }) {
     const mugBtn = h('button', { type: 'button', className: 'game-board__muggins btn' }, []);
     mugBtn.textContent = 'Muggins!';
     mugBtn.addEventListener('click', () => dispatch(callMuggins(activePid)));
-    toolbar.appendChild(mugBtn);
+    section.appendChild(mugBtn);
   }
 
   if (isDevelopmentMode()) {
