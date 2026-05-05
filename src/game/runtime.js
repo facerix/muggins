@@ -5,9 +5,6 @@ import { reducer } from '/src/engine/reducer.js';
 import { makeRng } from '/src/engine/rng.js';
 import * as persistence from '/src/game/persistence.js';
 
-/** `localStorage` key for dev-mode AI delay slider (integer ms). */
-export const DEV_AI_DELAY_MS_STORAGE_KEY = 'muggins-dev-ai-delay-ms';
-
 let currentState = null;
 let aiTimer = null;
 /** Base AI think delay (ms). Override with {@link configureAiDelay}. */

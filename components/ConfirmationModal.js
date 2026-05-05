@@ -155,10 +155,12 @@ class ConfirmationModal extends HTMLElement {
   #init() {
     const closeHandler = evt => {
       evt.preventDefault();
+      this.#emit('cancel');
       this.#modal?.close();
     };
     this.shadowRoot.querySelector('#close-modal').addEventListener('click', closeHandler);
     this.shadowRoot.querySelector('#btnCancel').addEventListener('click', closeHandler);
+    this.#modal.addEventListener('cancel', closeHandler);
 
     this.shadowRoot.querySelector('form').addEventListener('submit', evt => {
       if (evt.submitter?.id === 'btnOk') {

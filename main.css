@@ -259,6 +259,10 @@ a:focus-visible {
   flex-direction: column;
 }
 
+.gap-2 {
+  gap: 0.5rem;
+}
+
 .u-flex-1 {
   flex: 1;
 }

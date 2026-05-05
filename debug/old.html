@@ -1,0 +1,326 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1" />
+
+    <title>Muggins!</title>
+
+    <style type="text/css" media="all">
+      #game {
+        width: 32em;
+        height: 24em;
+        margin: auto;
+      }
+      #table {
+        background-color: green;
+        border: 1px solid black;
+        width: 32em;
+        height: 24em;
+        overflow: auto;
+        position: relative;
+      }
+      .tray {
+        /*border: 2px inset #050;*/
+        position: absolute;
+        text-align: center;
+      }
+      #player1,
+      #player4 {
+        width: 8em;
+        height: 4em;
+        left: 12em;
+      }
+      #player2,
+      #player3 {
+        width: 4em;
+        height: 8em;
+        top: 8em;
+      }
+      #player1 {
+        top: 0.25em;
+      }
+      #player2 {
+        left: 0.25em;
+      }
+      #player3 {
+        right: 0.25em;
+      }
+      #player4 {
+        bottom: 0.25em;
+      }
+      .aces {
+        width: 16em;
+        height: 4em;
+        left: 8em;
+        top: 10em;
+      }
+      .card {
+        background-color: white;
+
+        border: 1px solid silver;
+        padding-top: 1px;
+        float: left;
+        /*display: inline-block;*/
+        margin: 4px;
+        width: 2.5em;
+        height: 3.3em;
+        text-align: center;
+
+        /* progressive enhancements */
+        background-image: -moz-linear-gradient(top left, white 50%, silver);
+        background-image: -webkit-gradient(
+          linear,
+          left top,
+          right bottom,
+          color-stop(0, white),
+          color-stop(1, silver)
+        );
+        filter: progid:DXImageTransform.Microsoft.gradient(startColorStr='white', EndColorStr='silver');
+        -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='white', EndColorStr='silver')";
+
+        -moz-border-radius: 3px;
+        -webkit-border-radius: 3px;
+        border-radius: 0.25em; /*3px;*/
+      }
+      .card.spades,
+      .card.clubs {
+        color: black;
+      }
+      .card.hearts,
+      .card.diams {
+        color: red;
+      }
+
+      .card.back {
+        background-color: #007;
+
+        /* progressive enhancements */
+        background-image: -moz-linear-gradient(top left, #000077 25%, #7777ff 50%, #3333aa);
+        background-image: -webkit-gradient(
+          linear,
+          left top,
+          right bottom,
+          color-stop(0, #000077),
+          color-stop(1, #7777ff),
+          color-stop(2, #3333aa)
+        );
+        filter: progid:DXImageTransform.Microsoft.gradient(startColorStr='#000077', EndColorStr='#3333AA');
+        -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#000077', EndColorStr='#3333AA')";
+      }
+      .card.back.active {
+        border: 2px solid yellow;
+        cursor: pointer;
+      }
+      .card.holder {
+        background-color: #040;
+        border-color: #010;
+        margin: 0.25em 0.5em;
+
+        /* progressive enhancements */
+        background-image: -moz-linear-gradient(top left, #060 25%, #050 50%, #040 75%);
+        background-image: -webkit-gradient(
+          linear,
+          left top,
+          right bottom,
+          color-stop(0, #060),
+          color-stop(1, #050),
+          color-stop(2, #040)
+        );
+        filter: progid:DXImageTransform.Microsoft.gradient(startColorStr='#006600', EndColorStr='#004400');
+        -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#006600', EndColorStr='#004400')";
+      }
+    </style>
+
+    <!-- todo: any up-front javascript -->
+    <script type="text/javascript">
+      var now = new Date();
+      window.rndSeed = now.getSeconds();
+      function randOrd() {
+        return Math.round(Math.random(rndSeed)) - 0.5;
+      }
+
+      function addOnLoad(func) {
+        if (window.addEventListener) {
+          window.addEventListener('load', func, false);
+        } else {
+          window.attachEvent('onload', func);
+        }
+      }
+      function byId(id) {
+        return document.getElementById(id) || {};
+      }
+    </script>
+  </head>
+  <body>
+    <div id="game">
+      <div id="table">
+        <div id="player1" class="tray"></div>
+        <div id="player2" class="tray"></div>
+        <div id="player3" class="tray"></div>
+        <div id="player4" class="tray"></div>
+        <div class="tray aces">
+          <span class="card holder spades">&#x2660;<br />&nbsp;</span>
+          <span class="card holder hearts">&#x2665;<br />&nbsp;</span>
+          <span class="card holder clubs">&#x2663;<br />&nbsp;</span>
+          <span class="card holder diams">&#x2666;<br />&nbsp;</span>
+        </div>
+      </div>
+      <button id="btnShuffle" onclick="game.shuffle()" disabled="disabled">Shuffle</button>
+      <button id="btnDeal" onclick="game.deal()" disabled="disabled">Deal</button>
+      <button id="btnDebug" onclick="game.debug()" disabled="disabled">Debug</button>
+      <h2>Muggins!</h2>
+      <p>Eventually I'll put instructions on how to play here.</p>
+    </div>
+
+    <script type="text/javascript">
+      // create main game object
+      var game = {};
+
+      // basic deck initialization
+      var _valueAlias = { 0: 'A', 9: '10', 10: 'J', 11: 'Q', 12: 'K' };
+      function Card(s, v) {
+        this.suit = s;
+        this.value = v;
+        this.toString = function () {
+          return [
+            "<span class='card " + this.suit + "'>",
+            this.getValue(),
+            '<br/>&' + this.suit + ';',
+            '</span>',
+          ].join('');
+        };
+        this.getValue = function () {
+          if (this.value in _valueAlias) {
+            return _valueAlias[this.value];
+          } else {
+            return this.value + 1;
+          }
+        };
+      }
+      var suits = {
+        spades: '\u2660',
+        clubs: '\u2663',
+        hearts: '\u2665',
+        diams: '\u2666',
+      };
+      function Deck() {
+        // member properties/objects
+        this.cards = [];
+
+        // init
+        for (var key in suits) {
+          for (var j = 0; j < 13; j++) {
+            this.cards.push(new Card(key, j));
+          }
+        }
+
+        this.print = function () {
+          var buffer = [];
+          for (var i = 0; i < this.cards.length; i++) {
+            buffer.push(this.cards[i]);
+          }
+          return buffer.join('');
+        };
+        this.shuffle = function () {
+          // have to run our sort routine multiple times to make it sufficiently random
+          this.cards.sort(randOrd);
+          this.cards.sort(randOrd);
+          this.cards.sort(randOrd);
+          this.cards.sort(randOrd);
+        };
+      }
+      function Player(div) {
+        this.domNode = this.drawDom = this.discardDom = null;
+        this.draw = this.discard = [];
+
+        // init
+        if (div) {
+          this.domNode = div;
+          //var frag = new document.createDocumentFragment();
+          this.drawDom = document.createElement('span');
+          this.discardDom = document.createElement('span');
+          this.drawDom.className = 'card back';
+          this.domNode.appendChild(this.drawDom);
+          this.discardDom.className = 'card holder';
+          this.domNode.appendChild(this.discardDom);
+          //frag.appendChild(this.drawDom);
+          //frag.appendChild(this.discardDom);
+          //this.domNode.appendChild(frag);
+
+          this.draw = [];
+          this.discard = [];
+        }
+        var me = this;
+        this.drawCard = function (obj) {
+          if (!me.draw) {
+            me.draw = me.discard.slice();
+          }
+          var c = me.draw.pop();
+          me.discard.push(c);
+
+          me.discardDom.className = 'card ' + c.suit;
+          me.discardDom.innerHTML = c.getValue() + '<br/>' + suits[c.suit];
+        };
+        this.setActive = function (bln) {
+          if (bln) {
+            this.drawDom.className = 'card back active';
+            this.drawDom.onclick = this.drawCard;
+          } else {
+            this.drawDom.className = 'card back';
+            this.drawDom.onclick = null;
+          }
+        };
+      }
+      game.deck = new Deck();
+      game.players = [];
+      game.players.push(new Player(byId('player1')));
+      game.players.push(new Player(byId('player2')));
+      game.players.push(new Player(byId('player3')));
+      game.players.push(new Player(byId('player4')));
+
+      game.shuffle = function () {
+        for (var p in this.players) {
+          p.draw = p.discard = [];
+        }
+        this.deck.shuffle();
+
+        // deal cards to the players, if a game is active
+        this.postShuffle();
+      };
+
+      game.postShuffle = function () {
+        var nextDeal = 0;
+        for (var i = 0; i < this.deck.cards.length; i++) {
+          this.players[nextDeal++].draw.push(this.deck.cards[i]);
+          if (nextDeal == 4) {
+            nextDeal = 0;
+          }
+        }
+        for (var i = 0; i < this.players.length; i++) {
+          this.players[i].drawCard();
+        }
+      };
+
+      game.debug = function () {
+        byId('btnDeal').disabled = true;
+        this.postShuffle = function () {
+          byId('table').innerHTML = "<div id='debugWindow'>" + this.deck.print() + '</div>';
+        };
+        this.postShuffle();
+      };
+
+      addOnLoad(function () {
+        // enable the buttons
+        byId('btnShuffle').disabled = false;
+        //byId('btnDeal').disabled = false;
+        byId('btnDebug').disabled = false;
+
+        // deal the cards
+        game.shuffle();
+
+        // set player 1 active
+        game.players[0].setActive(true);
+      });
+    </script>
+  </body>
+</html>

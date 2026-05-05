@@ -50,10 +50,14 @@ const CacheConfig = {
       '/src/views/cardSvg.js',
       '/src/views/game.js',
       '/components/CardPile.js',
+      '/components/PlayerHand.js',
       '/components/ConfirmationModal.js',
       '/components/GameOverModal.js',
       '/components/NewGameModal.js',
+      '/components/SettingsModal.js',
       '/components/UpdateNotification.js',
+      '/vendor/tiks/tiks.bundle.mjs',
+      '/vendor/tiks/dist/chunk-RO3OQAOG.mjs',
     ];
   },
   

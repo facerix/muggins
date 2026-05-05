@@ -62,6 +62,7 @@ ${PROGRAMMATIC_CARD_SVG_CSS}
   background: var(--card-empty-bg, rgba(0, 0, 0, 0.12));
   align-items: center;
   justify-content: center;
+  cursor: default;
 }
 
 .pile__empty-label {

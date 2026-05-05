@@ -1,10 +1,12 @@
 // singleton class to manage the user's data
 
 import { v4WithTimestamp } from './uuid.js';
+import { DEFAULT_SETTINGS } from './game/settings.js';
 
 let instance;
 class DataStore extends EventTarget {
   #items = [];
+  #settings = DEFAULT_SETTINGS;
   #itemsById = new Map();
 
   constructor() {
@@ -40,6 +42,16 @@ class DataStore extends EventTarget {
     }
   }
 
+  #loadSettingsFromJson(json) {
+    try {
+      const settings = JSON.parse(json);
+      return settings;
+    } catch (error) {
+      console.warn('[DataStore] Failed to parse stored JSON, resetting settings.', error);
+      return DEFAULT_SETTINGS;
+    }
+  }
+
   async init() {
     let savedItemsJson = window.localStorage.getItem('items');
     if (!savedItemsJson) {
@@ -48,6 +60,13 @@ class DataStore extends EventTarget {
     }
     this.#items = this.#loadRecordsFromJson(savedItemsJson);
     this.#reindex();
+
+    let savedSettingsJson = window.localStorage.getItem('settings');
+    if (!savedSettingsJson) {
+      savedSettingsJson = JSON.stringify(DEFAULT_SETTINGS);
+      window.localStorage.setItem('settings', savedSettingsJson);
+    }
+    this.#settings = this.#loadSettingsFromJson(savedSettingsJson);
 
     setTimeout(() => {
       this.#emitChangeEvent('init', ['*']);
@@ -136,6 +155,20 @@ class DataStore extends EventTarget {
       this.#reindex();
       this.#emitChangeEvent('delete', [id]);
     }
+  }
+
+  get settings() {
+    return this.#settings;
+  }
+
+  updateSettings(settings) {
+    this.#settings = settings;
+    this.#saveSettings();
+    this.#emitChangeEvent('updated-settings', settings);
+  }
+
+  #saveSettings() {
+    window.localStorage.setItem('settings', JSON.stringify(this.#settings));
   }
 }
 

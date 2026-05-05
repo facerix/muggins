@@ -5,15 +5,12 @@ import {
   abandonGame,
   configureAiDelay,
   configureAiJitterEnabled,
-  configureAiJitterHalfMs,
-  DEV_AI_DELAY_MS_STORAGE_KEY,
   dispatch,
   getState,
   hydrateRuntime,
   pauseRuntime,
   resumeRuntime,
 } from '/src/game/runtime.js';
-import { isDevelopmentMode } from '/src/domUtils.js';
 import { mountGameView } from '/src/views/game.js';
 import { randomSeed } from '/src/newGameSetup.js';
 import { postGameStats, rosterFromState } from '/src/game/postGameStats.js';
@@ -24,22 +21,7 @@ import '/components/NewGameModal.js';
 import '/components/UpdateNotification.js';
 import '/components/NewGameModal.js';
 import '/components/GameOverModal.js';
-
-function bootAiTiming() {
-  if (isDevelopmentMode()) {
-    const raw = globalThis.localStorage?.getItem(DEV_AI_DELAY_MS_STORAGE_KEY);
-    const parsed = raw != null ? Number.parseInt(raw, 10) : 0;
-    const ms = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-    configureAiDelay(ms);
-    configureAiJitterEnabled(false);
-  } else {
-    configureAiDelay(1000);
-    configureAiJitterHalfMs(300);
-    configureAiJitterEnabled(true);
-  }
-}
-
-bootAiTiming();
+import '/components/SettingsModal.js';
 
 /**
  * Hydrate reducer runtime from persisted slot when Storage has a snapshot but RAM does not (reload).
@@ -96,6 +78,7 @@ function refreshMain() {
     if (lastWinnerShownFor !== key) {
       const winnerName = state.players.find(p => p.id === state.winner)?.name ?? state.winner;
       const { turnsPlayed, mugginsCalls } = postGameStats(state);
+      tiks.success();
       gameOverModal.showModal({ winnerName, turnsPlayed, mugginsCalls });
       lastWinnerShownFor = key;
     }
@@ -105,60 +88,48 @@ function refreshMain() {
   }
 }
 
-/** @param {CustomEvent} evt */
-function activeGameStorageChanged(evt) {
-  const { changeType, affectedRecords } = evt.detail;
-  if (changeType === 'init') return false;
-  if (changeType === 'delete') {
-    const ids = Array.isArray(affectedRecords) ? affectedRecords : [];
-    return ids.includes(ACTIVE_GAME_ID);
-  }
-  if (changeType === 'add' || changeType === 'update') {
-    const rec = affectedRecords;
-    return Boolean(rec && typeof rec === 'object' && rec.id === ACTIVE_GAME_ID);
-  }
-  return false;
-}
-
-Promise.all([
+let tiks = null;
+const whenLoaded = Promise.all([
   customElements.whenDefined('update-notification'),
   customElements.whenDefined('confirmation-modal'),
   customElements.whenDefined('new-game-modal'),
   customElements.whenDefined('game-over-modal'),
-]).then(async () => {
+  customElements.whenDefined('settings-modal'),
+  (async () => {
+    tiks = await import('./vendor/tiks/tiks.bundle.mjs');
+    tiks.init();
+  })(),
+]);
+
+whenLoaded.then(async () => {
   const updateNotification = document.querySelector('update-notification');
   const confirmationModal = document.querySelector('confirmation-modal');
   const newGameModal = document.querySelector('new-game-modal');
   const gameOverModal = document.querySelector('game-over-modal');
+  const settingsModal = document.querySelector('settings-modal');
   const gameSetupBtn = document.querySelector('#game-setup-btn');
   const abandonBtn = document.querySelector('#game-abandon-btn');
 
   window.addEventListener('sw-update-available', event => {
+    tiks.notify();
     console.log('Service worker update available, showing notification');
     updateNotification.show(event.detail.pendingWorker);
   });
 
   gameSetupBtn.addEventListener('click', () => {
-    confirmationModal.showModal('Are you sure you want to change the game setup?', 'change-setup');
+    tiks.pop();
+    settingsModal.showModal(DataStore.settings);
   });
 
   abandonBtn.addEventListener('click', () => {
+    tiks.warning();
     confirmationModal.showModal('Quit this game: are you sure?', 'abandon-game');
   });
 
   confirmationModal.addEventListener('confirm', event => {
     switch (event.detail.context) {
-      case 'change-setup':
-        // Don't reset runtime — pause AI scheduling and open the new-game modal
-        // dismissable. The board stays mounted underneath; dismissing resumes
-        // play, submitting starts a new game (replaces the active slot).
-        pauseRuntime();
-        newGameModal.showModal({
-          initialPlayers: rosterFromState(getState()),
-          dismissable: true,
-        });
-        break;
       case 'abandon-game':
+        tiks.click();
         abandonGame();
         break;
       default:
@@ -167,8 +138,25 @@ Promise.all([
   });
 
   newGameModal.addEventListener('submit', evt => {
+    tiks.pop();
     const { seed, players } = evt.detail;
     dispatch(start({ seed, players }));
+  });
+
+  settingsModal.addEventListener('save', evt => {
+    tiks.success();
+    const { settings } = evt.detail;
+    DataStore.updateSettings(settings);
+
+    configureAiDelay(settings.aiDelay);
+    configureAiJitterEnabled(settings.aiJitter);
+  });
+
+  settingsModal.addEventListener('cancel', () => {
+    tiks.click();
+  });
+  confirmationModal.addEventListener('cancel', () => {
+    tiks.click();
   });
 
   // Fires for any close path (Esc, backdrop, ×, submit) — resume after the
@@ -190,8 +178,28 @@ Promise.all([
   await DataStore.init();
 
   DataStore.addEventListener('change', evt => {
-    if (!activeGameStorageChanged(evt)) return;
-    refreshMain();
+    const { changeType, affectedRecords } = evt.detail;
+    let refresh = false;
+    switch (changeType) {
+      case 'init':
+        refresh = false;
+        break;
+      case 'delete':
+        const ids = Array.isArray(affectedRecords) ? affectedRecords : [];
+        refresh = ids.includes(ACTIVE_GAME_ID);
+        break;
+      case 'add':
+      case 'update':
+        const rec = affectedRecords;
+        refresh = Boolean(rec && typeof rec === 'object' && rec.id === ACTIVE_GAME_ID);
+        break;
+      default:
+        break;
+    }
+
+    if (refresh) {
+      refreshMain();
+    }
   });
 
   refreshMain();

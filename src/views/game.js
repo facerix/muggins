@@ -1,14 +1,8 @@
-import { callMuggins, flip, flipHeld, hold, play, playHeld } from '/src/engine/actions.js';
+import { callMuggins, flip, flipHeld, hold, play } from '/src/engine/actions.js';
 import { legalPlaysFor } from '/src/engine/legalMoves.js';
-import { personaForKind } from '/src/engine/ai/persona.js';
-import { h, isDevelopmentMode } from '/src/domUtils.js';
-import {
-  DEV_AI_DELAY_MS_STORAGE_KEY,
-  configureAiDelay,
-  configureAiJitterEnabled,
-  isAiScheduled,
-} from '/src/game/runtime.js';
+import { h } from '/src/domUtils.js';
 import '/components/CardPile.js';
+import '/components/PlayerHand.js';
 
 /** @param {{ type: string } & object} a @param {{ type: string } & object} b */
 function targetsEqual(a, b) {
@@ -49,12 +43,7 @@ export function mountGameView(main, { getState, dispatch, uiFrozen }) {
   const activePid = state.turn.playerId;
   const activeHuman = isHumanSeat(state, activePid) && state.turn.phase !== 'done';
 
-  const aiHint = h('p', {
-    className: 'game-board__ai-hint u-muted u-hidden',
-    'aria-live': 'polite',
-  });
-  aiHint.textContent = 'AI is thinking…';
-  section.appendChild(aiHint);
+  main.__cleanupGame = () => {};
 
   // Muggins button: active human in flip phase when the previous log entry is a
   // potentially-muggable action (HOLD/FLIP/FLIP_HELD) by another player. Engine validates
@@ -71,77 +60,9 @@ export function mountGameView(main, { getState, dispatch, uiFrozen }) {
     section.appendChild(mugBtn);
   }
 
-  if (isDevelopmentMode()) {
-    const raw = globalThis.localStorage?.getItem(DEV_AI_DELAY_MS_STORAGE_KEY);
-    const parsed = raw != null ? Number.parseInt(raw, 10) : 0;
-    const initialMs = Number.isFinite(parsed) ? Math.min(8000, Math.max(0, parsed)) : 0;
-
-    const devRow = h('div', { className: 'game-board__dev-ai' }, []);
-    const devLabel = h(
-      'label',
-      { className: 'game-board__dev-ai-label', htmlFor: 'game-dev-ai-delay' },
-      []
-    );
-    devLabel.textContent = 'AI delay (ms, dev)';
-
-    const range = h('input', {
-      type: 'range',
-      id: 'game-dev-ai-delay',
-      className: 'game-board__dev-ai-range',
-      min: '0',
-      max: '8000',
-      step: '50',
-      value: String(initialMs),
-    });
-
-    const valueOut = h('span', { className: 'game-board__dev-ai-value u-muted' }, []);
-    valueOut.textContent = String(initialMs);
-
-    const syncDelay = ms => {
-      configureAiDelay(ms);
-      configureAiJitterEnabled(false);
-      globalThis.localStorage?.setItem(DEV_AI_DELAY_MS_STORAGE_KEY, String(ms));
-      valueOut.textContent = String(ms);
-    };
-
-    range.addEventListener('input', () => {
-      const ms = Number.parseInt(range.value, 10);
-      syncDelay(Number.isFinite(ms) ? ms : 0);
-    });
-
-    devRow.appendChild(devLabel);
-    devRow.appendChild(range);
-    devRow.appendChild(valueOut);
-    section.appendChild(devRow);
-  }
-
-  const syncAiHint = () => {
-    const s = getState();
-    if (!s || s.winner || s.turn.phase === 'done') {
-      aiHint.classList.add('u-hidden');
-      return;
-    }
-    const pid = s.turn.playerId;
-    const row = s.players.find(p => p.id === pid);
-    const isAi = Boolean(row && personaForKind(row.kind));
-    const show = isAi && isAiScheduled();
-    aiHint.classList.toggle('u-hidden', !show);
-  };
-
-  if (!uiFrozen) {
-    const pulseId = window.setInterval(syncAiHint, 120);
-    main.__cleanupGame = () => {
-      window.clearInterval(pulseId);
-    };
-    syncAiHint();
-  } else {
-    aiHint.classList.add('u-hidden');
-    main.__cleanupGame = () => {};
-  }
-
   // playCtx: drives the "click a highlighted target" affordance.
-  // - decide phase: target plays the flipped card (PLAY).
-  // - flip phase with a held-top that has legal targets: target plays the held-top (PLAY_HELD).
+  // Currently only active in the decide phase: target plays the flipped card (PLAY).
+  // TODO: re-add PLAY_HELD targeting behind hint-mode setting.
   let playCtx = null;
   if (activeHuman) {
     if (state.turn.phase === 'decide' && state.flippedCard) {
@@ -158,77 +79,7 @@ export function mountGameView(main, { getState, dispatch, uiFrozen }) {
           dispatch(play(activePid, target));
         },
       };
-    } else if (state.turn.phase === 'flip') {
-      const hand = state.hands.find(h => h.playerId === activePid);
-      const top = hand?.faceUp?.[hand.faceUp.length - 1];
-      if (top) {
-        const heldLegals = legalPlaysFor(state, top);
-        if (heldLegals.length > 0) {
-          playCtx = {
-            kind: 'held',
-            card: top,
-            legals: heldLegals,
-            dispatchPlay: target => {
-              const cur = getState();
-              if (!cur || cur.winner) return;
-              if (cur.turn.playerId !== activePid || cur.turn.phase !== 'flip') return;
-              const curHand = cur.hands.find(h => h.playerId === activePid);
-              const curTop = curHand?.faceUp?.[curHand.faceUp.length - 1];
-              if (!curTop) return;
-              if (!legalPlaysFor(cur, curTop).some(t => targetsEqual(t, target))) return;
-              dispatch(playHeld(activePid, target));
-            },
-          };
-        }
-      }
     }
-  }
-
-  if (activeHuman) {
-    const controls = h('div', { className: 'game-board__controls' }, []);
-
-    if (state.turn.phase === 'flip') {
-      if (playCtx?.kind === 'held') {
-        const hint = h('p', { className: 'game-board__hint u-muted' }, []);
-        hint.textContent =
-          'Your held card has a legal play — tap a highlighted pile, or flip anyway (Muggins risk).';
-        controls.appendChild(hint);
-      }
-
-      const hand = state.hands.find(h => h.playerId === activePid);
-      if (hand && hand.faceDown.length > 0) {
-        const flipBtn = h('button', { type: 'button', className: 'game-board__flip btn' }, []);
-        flipBtn.textContent = 'Flip';
-        flipBtn.addEventListener('click', () => dispatch(flip(activePid)));
-        controls.appendChild(flipBtn);
-      } else if (hand && hand.faceDown.length === 0) {
-        const fhBtn = h('button', { type: 'button', className: 'game-board__flip-held btn' }, []);
-        fhBtn.textContent = 'Flip held pile';
-        fhBtn.addEventListener('click', () => dispatch(flipHeld(activePid)));
-        controls.appendChild(fhBtn);
-      }
-    } else if (state.turn.phase === 'decide' && state.flippedCard) {
-      const fc = state.flippedCard;
-      const reveal = h('div', { className: 'game-board__flipped' }, []);
-      const flippedLabel = h('span', { className: 'game-board__mini-label u-muted' }, []);
-      flippedLabel.textContent = 'Played card';
-      const flippedPile = h('card-pile', {}, []);
-      flippedPile.setAttribute('count', '1');
-      flippedPile.setAttribute('rank', String(fc.rank));
-      flippedPile.setAttribute('suit', fc.suit);
-      flippedPile.setAttribute('face', 'up');
-      reveal.appendChild(flippedLabel);
-      reveal.appendChild(flippedPile);
-
-      const holdBtn = h('button', { type: 'button', className: 'game-board__hold btn' }, []);
-      holdBtn.textContent = 'Hold';
-      holdBtn.addEventListener('click', () => dispatch(hold(activePid)));
-
-      controls.appendChild(reveal);
-      controls.appendChild(holdBtn);
-    }
-
-    section.appendChild(controls);
   }
 
   const center = h('div', { className: 'game-board__center' }, []);
@@ -279,86 +130,40 @@ export function mountGameView(main, { getState, dispatch, uiFrozen }) {
   const playersHost = h('div', { className: 'game-board__players' }, []);
 
   state.players.forEach(playerRow => {
-    const hid = playerRow.id;
-    const hand = state.hands.find(h => h.playerId === hid);
-    const isActive = state.turn.playerId === hid;
-    const slot = h('div', { className: 'game-board__player' }, []);
-    if (isActive) slot.classList.add('game-board__player--active');
+    const hand = state.hands.find(h => h.playerId === playerRow.id);
+    const isActive = state.turn.playerId === playerRow.id;
+    const isDeciding = isActive && state.turn.phase === 'decide' && !!state.flippedCard;
 
-    const head = h('div', { className: 'game-board__player-head' }, []);
-    const nameEl = h('span', { className: 'game-board__player-name' }, []);
-    nameEl.textContent = playerRow.name;
-    head.appendChild(nameEl);
-    const badge = h('span', { className: 'game-board__player-kind u-muted' }, []);
-    badge.textContent =
-      playerRow.kind === 'human'
-        ? 'Human'
-        : playerRow.kind === 'ai-random'
-          ? 'Random AI'
-          : playerRow.kind === 'ai-greedy'
-            ? 'Greedy AI'
-            : playerRow.kind === 'ai-strategist'
-              ? 'Strategist AI'
-              : playerRow.kind;
-    head.appendChild(badge);
-    slot.appendChild(head);
+    const ph = h('player-hand', {});
+    ph.setAttribute('name', playerRow.name);
+    ph.setAttribute('kind', playerRow.kind);
+    ph.setAttribute('playerId', playerRow.id);
+    // During the decide phase the flipped card has left hand.faceDown and lives
+    // in state.flippedCard.  Prepend it back so the component can show it face-up.
+    ph.drawPile = isDeciding
+      ? [state.flippedCard, ...(hand?.faceDown ?? [])]
+      : hand?.faceDown ?? [];
+    ph.discardPile = hand?.faceUp ?? [];
+    ph.isActive = isActive;
+    ph.isFlipped = isDeciding;
 
-    const cardsRow = h('div', { className: 'game-board__player-cards' }, []);
+    ph.addEventListener('flipped', () => {
+      const cur = getState();
+      if (!cur || cur.winner) return;
+      const curHand = cur.hands.find(h => h.playerId === playerRow.id);
+      if (!curHand) return;
+      if (curHand.faceDown.length > 0) {
+        dispatch(flip(playerRow.id));
+      } else {
+        dispatch(flipHeld(playerRow.id));
+      }
+    });
 
-    const stock = h('div', { className: 'game-board__stock' }, []);
-    const stockLabel = h('span', { className: 'game-board__mini-label u-muted' }, []);
-    stockLabel.textContent = 'Deck';
-    const stockPile = h('card-pile', {}, []);
-    stockPile.setAttribute('face', 'down');
-    stockPile.setAttribute('count', String(hand?.faceDown?.length ?? 0));
-    stock.appendChild(stockLabel);
-    stock.appendChild(stockPile);
+    ph.addEventListener('held', () => {
+      dispatch(hold(playerRow.id));
+    });
 
-    const held = h('div', { className: 'game-board__held' }, []);
-    const heldLabel = h('span', { className: 'game-board__mini-label u-muted' }, []);
-    heldLabel.textContent = 'Held';
-    const heldUp = hand?.faceUp ?? [];
-    const heldTop = heldUp[heldUp.length - 1];
-    const heldPile = h('card-pile', {}, []);
-    if (!heldTop) {
-      heldPile.setAttribute('count', '0');
-    } else {
-      heldPile.setAttribute('count', String(heldUp.length));
-      heldPile.setAttribute('rank', String(heldTop.rank));
-      heldPile.setAttribute('suit', String(heldTop.suit));
-      heldPile.setAttribute('face', 'up');
-    }
-
-    const oppTarget = { type: 'opponent', playerId: hid };
-    const canPlayOpp = !!playCtx && playCtx.legals.some(t => targetsEqual(t, oppTarget));
-
-    if (canPlayOpp) {
-      held.classList.add('game-board__held--legal');
-      held.setAttribute('role', 'button');
-      held.tabIndex = 0;
-      held.addEventListener('click', () => {
-        playCtx.dispatchPlay(oppTarget);
-      });
-      held.addEventListener('keydown', ev => {
-        if (ev.key === 'Enter' || ev.key === ' ') {
-          ev.preventDefault();
-          held.click();
-        }
-      });
-    }
-
-    // Highlight the active player's own held pile when a PLAY_HELD is available.
-    if (playCtx?.kind === 'held' && hid === activePid) {
-      held.classList.add('game-board__held--source');
-    }
-
-    held.appendChild(heldLabel);
-    held.appendChild(heldPile);
-    cardsRow.appendChild(stock);
-    cardsRow.appendChild(held);
-    slot.appendChild(cardsRow);
-
-    playersHost.appendChild(slot);
+    playersHost.appendChild(ph);
   });
 
   section.appendChild(playersHost);

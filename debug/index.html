@@ -46,6 +46,14 @@
         text-align: center;
         word-break: break-word;
       }
+
+      .hands-test__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+        gap: 1rem 0.75rem;
+        align-items: center;
+        justify-items: center;
+      }
     </style>
   </head>
   <body class="u-fill-height">
@@ -60,6 +68,6 @@
       <div id="fixture-root"></div>
     </main>
     <footer id="main-foot"><a href="/">← Muggins</a></footer>
-    <script type="module" src="/card-ui-fixture.js"></script>
+    <script type="module" src="/debug/card-ui-fixture.js"></script>
   </body>
 </html>
